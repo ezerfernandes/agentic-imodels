@@ -2,7 +2,7 @@
 
 Interpretable tabular regressors discovered by agentic loops (Claude Code /
 OpenAI Codex) — a sibling of the human-designed
-[`imodels`](https://github.com/csinva/imodels) library.
+[`imodels`](https://github.com/ezerfernandes/imodels) library.
 
 Each model in this package was produced by `evolve`, an autonomous loop that
 repeatedly rewrites a scikit-learn-compatible `InterpretableRegressor` class

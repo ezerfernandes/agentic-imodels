@@ -7,7 +7,7 @@ The root `SKILL.md` is designed for coding agents such as Codex, Claude Code, an
 Point the agent at the repository root:
 
 ```markdown
-Use the agentic-imodels skill from https://github.com/csinva/agentic-imodels.
+Use the agentic-imodels skill from https://github.com/ezerfernandes/agentic-imodels.
 ```
 
 In a local checkout, reference the root skill file:

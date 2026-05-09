@@ -63,7 +63,7 @@ AGENTS_MD_STANDARD = """You are an expert data scientist. You MUST write and exe
 
 1. Read `info.json` to get the research question and dataset metadata.
 2. Load the dataset from `{dataset_name}.csv`.
-3. The `imodels` library at <https://github.com/csinva/imodels> provides
+3. The `imodels` library at <https://github.com/ezerfernandes/imodels> provides
    interpretable scikit-learn-compatible regressors and classifiers that
    you can use alongside scikit-learn.
 4. Write a Python script called `analysis.py` that:
@@ -85,7 +85,7 @@ Where `response` is a Likert scale score: 0 = strong "No", 100 = strong "Yes".
 You should use interpretable models to understand the data. Available tools:
 
 - **scikit-learn**: Use `LinearRegression`, `Ridge`, `Lasso`, `DecisionTreeRegressor`, `DecisionTreeClassifier` for interpretable models. Use `feature_importances_` and `coef_` to understand feature effects.
-- **imodels** (<https://github.com/csinva/imodels>): Use `from imodels import RuleFitRegressor, FIGSRegressor, HSTreeRegressor` for rule-based and tree-based interpretable models. These provide human-readable rules and feature importance.
+- **imodels** (<https://github.com/ezerfernandes/imodels>): Use `from imodels import RuleFitRegressor, FIGSRegressor, HSTreeRegressor` for rule-based and tree-based interpretable models. These provide human-readable rules and feature importance.
 - **statsmodels**: Use `statsmodels.api.OLS` for regression with p-values and confidence intervals.
 - **scipy.stats**: Use for statistical tests (t-test, chi-square, correlation, ANOVA).
 
@@ -284,7 +284,9 @@ def prepare_dataset(dataset_name: str, mode: str, output_dir: str):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Prepare Blade dataset run directories")
+    parser = argparse.ArgumentParser(
+        description="Prepare Blade dataset run directories"
+    )
     parser.add_argument(
         "--dataset",
         type=str,

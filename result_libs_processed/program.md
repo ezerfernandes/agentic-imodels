@@ -27,7 +27,7 @@ Using the newly built `combined_results.csv`, select a set of top-performing mod
 
 Now, build the library here in a folder named `agentic-imodels`.
 
-- The library should follow the general structure of [this repo https://github.com/csinva/imodels](https://github.com/csinva/imodels)
+- The library should follow the general structure of [this repo https://github.com/ezerfernandes/imodels](https://github.com/ezerfernandes/imodels)
   - Include the readme, the uv setup, and the source structure
   - There is no need to write notebooks/test/CI.
 - Additionally, write a `SKILL.md` file to be used by an agent. This file should summarize the performance of the generated tabular regression models and describe exactly how to use the library.

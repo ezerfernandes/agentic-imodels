@@ -20,8 +20,8 @@ Do not use this skill for classification unless you explicitly explain that `age
 ## Install
 
 ```bash
-uv add git+https://github.com/csinva/agentic-imodels
-pip install git+https://github.com/csinva/agentic-imodels
+uv add git+https://github.com/ezerfernandes/agentic-imodels
+pip install git+https://github.com/ezerfernandes/agentic-imodels
 ```
 
 For a local checkout:

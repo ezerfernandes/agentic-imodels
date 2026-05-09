@@ -3,8 +3,8 @@
 `agentic-imodels` is a small Python package of scikit-learn-compatible tabular regressors whose fitted forms are designed to be read by humans and coding agents. The repository root is the canonical install target and the canonical skill entrypoint.
 
 ```bash
-pip install git+https://github.com/csinva/agentic-imodels
-uv add git+https://github.com/csinva/agentic-imodels
+pip install git+https://github.com/ezerfernandes/agentic-imodels
+uv add git+https://github.com/ezerfernandes/agentic-imodels
 ```
 
 ```python
@@ -34,7 +34,7 @@ The result is a curated set of ten estimators that plug into normal scikit-learn
 For local development:
 
 ```bash
-git clone https://github.com/csinva/agentic-imodels
+git clone https://github.com/ezerfernandes/agentic-imodels
 cd agentic-imodels
 uv sync --extra dev
 uv run --extra dev python -m pytest

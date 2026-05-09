@@ -60,8 +60,8 @@ research = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/csinva/agentic-imodels"
-Repository = "https://github.com/csinva/agentic-imodels"
+Homepage = "https://github.com/ezerfernandes/agentic-imodels"
+Repository = "https://github.com/ezerfernandes/agentic-imodels"
 Paper = "https://arxiv.org/abs/2605.03808"
 
 [build-system]
