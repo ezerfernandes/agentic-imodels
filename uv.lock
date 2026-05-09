@@ -26,12 +26,6 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform != 'linux'",
 ]
 
-[manifest]
-members = [
-    "agentic-imodels",
-    "imodels-evolve",
-]
-
 [[package]]
 name = "accelerate"
 version = "1.13.0"
@@ -69,7 +63,7 @@ wheels = [
 [[package]]
 name = "agentic-imodels"
 version = "0.1.0"
-source = { editable = "result_libs_processed/agentic-imodels" }
+source = { editable = "." }
 dependencies = [
     { name = "interpret" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -80,24 +74,58 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "build" },
+    { name = "pytest" },
+]
+research = [
     { name = "adjusttext" },
+    { name = "azure-identity" },
+    { name = "datasets" },
+    { name = "imodels" },
+    { name = "imodelsx" },
+    { name = "markdown" },
     { name = "matplotlib" },
+    { name = "openai" },
+    { name = "openml" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pytest" },
+    { name = "pmlb" },
+    { name = "pyarrow" },
+    { name = "pygam" },
+    { name = "pypdf2" },
+    { name = "tabpfn" },
+    { name = "torch" },
+    { name = "transformers" },
+    { name = "weasyprint" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "adjusttext", marker = "extra == 'dev'", specifier = ">=1.3.0" },
+    { name = "adjusttext", marker = "extra == 'research'", specifier = ">=1.3.0" },
+    { name = "azure-identity", marker = "extra == 'research'", specifier = ">=1.25.3" },
+    { name = "build", marker = "extra == 'dev'", specifier = ">=1.2" },
+    { name = "datasets", marker = "extra == 'research'", specifier = ">=4.8.3" },
+    { name = "imodels", marker = "extra == 'research'", specifier = ">=2.0.4" },
+    { name = "imodelsx", marker = "extra == 'research'", specifier = ">=1.0.13" },
     { name = "interpret", specifier = ">=0.6" },
-    { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.10.8" },
+    { name = "markdown", marker = "extra == 'research'", specifier = ">=3.10.2" },
+    { name = "matplotlib", marker = "extra == 'research'", specifier = ">=3.10.0" },
     { name = "numpy", specifier = ">=1.24" },
-    { name = "pandas", marker = "extra == 'dev'", specifier = ">=2.0" },
+    { name = "openai", marker = "extra == 'research'", specifier = ">=2.29.0" },
+    { name = "openml", marker = "extra == 'research'", specifier = ">=0.14.0" },
+    { name = "pandas", marker = "extra == 'research'", specifier = ">=2.0.0" },
+    { name = "pmlb", marker = "extra == 'research'", specifier = ">=1.0.1.post3" },
+    { name = "pyarrow", marker = "extra == 'research'", specifier = ">=14.0.0" },
+    { name = "pygam", marker = "extra == 'research'", specifier = ">=0.12.0" },
+    { name = "pypdf2", marker = "extra == 'research'", specifier = ">=3.0.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "scikit-learn", specifier = ">=1.3" },
+    { name = "tabpfn", marker = "extra == 'research'", specifier = ">=7.0.0" },
+    { name = "torch", marker = "extra == 'research'", specifier = ">=2.10.0" },
+    { name = "transformers", marker = "extra == 'research'", specifier = ">=5.3.0" },
+    { name = "weasyprint", marker = "extra == 'research'", specifier = ">=68.1" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "research"]
 
 [[package]]
 name = "aiohappyeyeballs"
@@ -567,6 +595,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/d9/d5340b43cf5fbe7fe5a083d237e5338cc1caa73bea523be1c5e452c26290/brotlicffi-1.2.0.1-pp311-pypy311_pp73-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:37cb587d32bf7168e2218c455e22e409ad1f3157c6c71945879a311f3e6b6abf", size = 406710, upload-time = "2026-03-05T19:54:07.272Z" },
     { url = "https://files.pythonhosted.org/packages/a3/82/dbced4c1e0792efdf23fd90ff6d2a320c64ff4dfef7aacc85c04fde9ddd2/brotlicffi-1.2.0.1-pp311-pypy311_pp73-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:9d6ba65dd528892b4d9960beba2ae011a753620bcfc66cf6fa3cee18d7b0baa4", size = 402787, upload-time = "2026-03-05T19:54:08.73Z" },
     { url = "https://files.pythonhosted.org/packages/ef/6f/534205ba7590c9a8716a614f270c5c2ec419b5b7079b3f9cd31b7b5580de/brotlicffi-1.2.0.1-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:f2a5575653b0672638ba039b82fda56854934d7a6a24d4b8b5033f73ab43cbc1", size = 375108, upload-time = "2026-03-05T19:54:10.079Z" },
+]
+
+[[package]]
+name = "build"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "(python_full_version < '3.11' and os_name == 'nt' and sys_platform == 'darwin') or (os_name == 'nt' and platform_machine != 'x86_64' and sys_platform == 'darwin') or (os_name == 'nt' and sys_platform != 'darwin' and sys_platform != 'linux')" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.10.2'" },
+    { name = "packaging" },
+    { name = "pyproject-hooks" },
+    { name = "tomli", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/e0/df5e171f685f82f37b12e1f208064e24244911079d7b767447d1af7e0d70/build-1.5.0.tar.gz", hash = "sha256:302c22c3ba2a0fd5f3911918651341ebb3896176cbdec15bd421f80b1afc7647", size = 89796, upload-time = "2026-04-30T03:18:25.17Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0d/fe/6bea5c9162869c5beba5d9c8abbed835ec85bf1ec1fba05a3822325c45f3/build-1.5.0-py3-none-any.whl", hash = "sha256:13f3eecb844759ab66efec90ca17639bbf14dc06cb2fdf37a9010322d9c50a6f", size = 26018, upload-time = "2026-04-30T03:18:23.644Z" },
 ]
 
 [[package]]
@@ -1760,64 +1804,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d3/32/e5a0f5df56bd4a82bce1e2f2b8c46cbc07e9a904cc125b24dcc67a8c3c23/imodels-2.0.4.tar.gz", hash = "sha256:6aadab17ff176033022264a70c3571fa300bd2584590aec80bbf0254d91f58ab", size = 238986, upload-time = "2025-11-25T16:27:24.942Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/10/530b51352d3dcbce5f242e9d9c07a4ece5a983af5d4cceb8c6fad4e8e087/imodels-2.0.4-py3-none-any.whl", hash = "sha256:ec9038de1017ff6596038ac994ecec1625fdec3a6ba96b88304d1e94e4247767", size = 274517, upload-time = "2025-11-25T16:27:23.373Z" },
-]
-
-[[package]]
-name = "imodels-evolve"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "adjusttext" },
-    { name = "agentic-imodels" },
-    { name = "azure-identity" },
-    { name = "datasets" },
-    { name = "imodels" },
-    { name = "imodelsx" },
-    { name = "interpret" },
-    { name = "markdown" },
-    { name = "matplotlib" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "openai" },
-    { name = "openml" },
-    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pmlb" },
-    { name = "pyarrow" },
-    { name = "pygam" },
-    { name = "pypdf2" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "tabpfn" },
-    { name = "torch" },
-    { name = "transformers" },
-    { name = "weasyprint" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "adjusttext", specifier = ">=1.3.0" },
-    { name = "agentic-imodels", editable = "result_libs_processed/agentic-imodels" },
-    { name = "azure-identity", specifier = ">=1.25.3" },
-    { name = "datasets", specifier = ">=4.8.3" },
-    { name = "imodels", specifier = ">=2.0.4" },
-    { name = "imodelsx", specifier = ">=1.0.13" },
-    { name = "interpret", specifier = ">=0.6.0" },
-    { name = "markdown", specifier = ">=3.10.2" },
-    { name = "matplotlib", specifier = ">=3.10.0" },
-    { name = "numpy", specifier = ">=1.24.0" },
-    { name = "openai", specifier = ">=2.29.0" },
-    { name = "openml", specifier = ">=0.14.0" },
-    { name = "pandas", specifier = ">=2.0.0" },
-    { name = "pmlb", specifier = ">=1.0.1.post3" },
-    { name = "pyarrow", specifier = ">=14.0.0" },
-    { name = "pygam", specifier = ">=0.12.0" },
-    { name = "pypdf2", specifier = ">=3.0.1" },
-    { name = "scikit-learn", specifier = ">=1.3.0" },
-    { name = "tabpfn", specifier = ">=7.0.0" },
-    { name = "torch", specifier = ">=2.10.0" },
-    { name = "transformers", specifier = ">=5.3.0" },
-    { name = "weasyprint", specifier = ">=68.1" },
 ]
 
 [[package]]
@@ -4535,6 +4521,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/69/56/e4d7e1bd70d997713649c5ce530b2d15a5fc2245a74ca820fc2d51d89d4d/pyphen-0.17.2.tar.gz", hash = "sha256:f60647a9c9b30ec6c59910097af82bc5dd2d36576b918e44148d8b07ef3b4aa3", size = 2079470, upload-time = "2025-01-20T13:18:36.296Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/1f/c2142d2edf833a90728e5cdeb10bdbdc094dde8dbac078cee0cf33f5e11b/pyphen-0.17.2-py3-none-any.whl", hash = "sha256:3a07fb017cb2341e1d9ff31b8634efb1ae4dc4b130468c7c39dd3d32e7c3affd", size = 2079358, upload-time = "2025-01-20T13:18:29.629Z" },
+]
+
+[[package]]
+name = "pyproject-hooks"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/82/28175b2414effca1cdac8dc99f76d660e7a4fb0ceefa4b4ab8f5f6742925/pyproject_hooks-1.2.0.tar.gz", hash = "sha256:1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8", size = 19228, upload-time = "2024-09-29T09:24:13.293Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/24/12818598c362d7f300f18e74db45963dbcb85150324092410c8b49405e42/pyproject_hooks-1.2.0-py3-none-any.whl", hash = "sha256:9e5c6bfa8dcc30091c74b0cf803c81fdd29d94f01992a7707bc97babb1141913", size = 10216, upload-time = "2024-09-29T09:24:11.978Z" },
 ]
 
 [[package]]

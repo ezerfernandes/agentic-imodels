@@ -1,41 +1,11 @@
-<h1 align="center">Agentic-imodels</h1>
-<p align="center">Evolving agentic interpretability tools via autoresearch</p>
+# agentic-imodels
 
-<p align="center">
-<a href="#quick-start">Quick start</a> •
-<a href="#repo-layout">Repo layout</a> •
-<a href="#discovered-models">Discovered models</a> •
-<a href="#how-the-loop-works">How the loop works</a> •
-<a href="https://arxiv.org/abs/2605.03808">Paper</a>
-</p>
-
-<p align="center">
-<img src="https://img.shields.io/badge/python-3.10%2B-blue">
-<img src="https://img.shields.io/badge/license-MIT-green">
-<img src="https://img.shields.io/badge/uv-managed-orange">
-<img src="https://img.shields.io/badge/sklearn-compatible-yellow">
-</p>
-
-> Plugin skill:
-> To use the developed models in your own data-science projects, just add a pointer to the skill file at <https://github.com/csinva/agentic-imodels/tree/main/result_libs_processed/agentic-imodels> in your CLAUDE.md / AGENTS.md.
-
-We built a library of 10 `scikit-learn`-compatible regressors whose string representations are explicitly optimized to be read by another LLM — interpretable *by agents*, not just by humans.
-We did this by using coding agents with a fixed evaluation harness and a single Python file. that is optimized for:
-
-- **Predictive performance** - root-mean squared error (RMSE) across many datasets
-- **Agent Interpretability** — fraction of LLM-graded tests passed
-
-## Quickstart
-
-**Requirements:** Python 3.10+ and [uv](https://docs.astral.sh/uv/).
+`agentic-imodels` is a small Python package of scikit-learn-compatible tabular regressors whose fitted forms are designed to be read by humans and coding agents. The repository root is the canonical install target and the canonical skill entrypoint.
 
 ```bash
-git clone https://github.com/csinva/imodels-evolve
-cd imodels-evolve
-uv sync
+pip install git+https://github.com/csinva/agentic-imodels
+uv add git+https://github.com/csinva/agentic-imodels
 ```
-
-### Use the curated discovered models
 
 ```python
 from sklearn.datasets import fetch_california_housing
@@ -43,122 +13,104 @@ from sklearn.model_selection import train_test_split
 from agentic_imodels import HingeEBMRegressor
 
 X, y = fetch_california_housing(return_X_y=True)
-X_tr, X_te, y_tr, y_te = train_test_split(X, y, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
-model = HingeEBMRegressor()
-model.fit(X_tr, y_tr)
-
-print(model)               # human/LLM-readable equation
-preds = model.predict(X_te)
+model = HingeEBMRegressor().fit(X_train, y_train)
+print(model)              # compact equation / rule set / model card
+predictions = model.predict(X_test)
 ```
 
-Every estimator follows the standard `BaseEstimator + RegressorMixin` contract, so it drops into `Pipeline`, `cross_val_score`, `GridSearchCV`, etc.
+## Why This Exists
 
-### Run the agentic loop yourself
+The models in this package came from agentic research loops that repeatedly wrote, evaluated, and selected interpretable regressors. They optimize for two things that are usually in tension:
+
+- **Predictive performance:** RMSE rank across tabular regression datasets.
+- **Agent readability:** whether another LLM can answer questions from the fitted model text.
+
+The result is a curated set of ten estimators that plug into normal scikit-learn workflows while making `str(model)` a first-class artifact.
+
+## Install And Develop
+
+For local development:
 
 ```bash
-cd evolve
-uv run run_baselines.py            # establish baseline scores
-uv run interpretable_regressor.py  # one experiment iteration
+git clone https://github.com/csinva/agentic-imodels
+cd agentic-imodels
+uv sync --extra dev
+uv run --extra dev python -m pytest
 ```
 
-Then point a coding agent at [`evolve/program.md`](evolve/program.md):
+Runtime dependencies are intentionally lean: `numpy`, `scikit-learn`, and `interpret`. Research dependencies are kept behind the optional `research` extra.
 
+## Model Guide
+
+| Class | Rank ↓ | Test interp ↑ | Category | Best use |
+| --- | ---: | ---: | --- | --- |
+| `HingeEBMRegressor` | 108.2 | 0.71 | display-predict decoupled | Default when accuracy matters and a readable display is enough. |
+| `DistilledTreeBlendAtlasRegressor` | 139.7 | 0.71 | display-predict decoupled | Strong prediction with a probe-answer atlas summary. |
+| `DualPathSparseSymbolicRegressor` | 163.5 | 0.71 | display-predict decoupled | Sparse symbolic display with a stronger hidden ensemble predictor. |
+| `HybridGAM` | 163.8 | 0.68 | display-predict decoupled | Additive display plus residual random-forest correction. |
+| `TeacherStudentRuleSplineRegressor` | 204.0 | 0.80 | display-predict decoupled | Highest held-out LLM interpretability score. |
+| `SparseSignedBasisPursuitRegressor` | 272.7 | 0.76 | honest | Sparse basis model where display and prediction are aligned. |
+| `HingeGAMRegressor` | 280.2 | 0.78 | honest | Pure hinge GAM with readable threshold effects. |
+| `WinsorizedSparseOLSRegressor` | 326.9 | 0.73 | honest | Sparse linear model after outlier clipping. |
+| `TinyDTDepth2Regressor` | 334.0 | 0.71 | honest | Smallest tree-style explanation. |
+| `SmartAdditiveRegressor` | 354.3 | 0.73 | honest | Honest additive shapes with linear or short piecewise terms. |
+
+Use a **display-predict decoupled** model when predictive rank matters most. Use an **honest** model when the printed explanation must closely match the computation used by `predict`.
+
+The same metadata is available programmatically:
+
+```python
+from agentic_imodels import HONEST_MODELS, MODEL_REGISTRY, get_model_info
+
+print(HONEST_MODELS)
+print(get_model_info("HingeEBMRegressor"))
 ```
-Read and follow the instructions in evolve/program.md.
-```
 
-The agent edits `evolve/interpretable_regressor.py` in a loop, commits each attempt, and logs to `evolve/results/overall_results.csv`. See [`evolve/readme.md`](evolve/readme.md) for the full protocol. A parallel setup for Codex lives in [`evolve_codex/`](evolve_codex/).
+## Documentation
 
-## Repo layout
+- [Docs index](docs/README.md)
+- [Model selection guide](docs/model-selection.md)
+- [API reference](docs/api-reference.md)
+- [Agent skill guide](docs/agent-skill.md)
+- [Development and release guide](docs/development.md)
 
-| Folder | Purpose |
+## Use As A Skill
+
+The root [`SKILL.md`](SKILL.md) is written for Codex, Claude Code, and similar coding agents. Point an agent at this repository root when you want it to choose, fit, print, and interpret these regressors in a data-science workflow.
+
+## Research Provenance
+
+The repository still carries the research machinery that produced the package:
+
+| Path | Purpose |
 | --- | --- |
-| [`evolve/`](evolve/) | The Claude-driven agentic loop — fixed harness (`run_baselines.py`, `src/`), agent-edited model file (`interpretable_regressor.py`), agent prompt (`program.md`). |
-| [`evolve_codex/`](evolve_codex/) | Same loop, OpenAI Codex agent. |
-| [`result_libs/`](result_libs/) | Raw per-run output: every regressor the agent wrote during each loop, grouped by date / agent / effort. Includes `combined_results.csv` and `pareto_evolved.csv` aggregating all runs. |
-| [`result_libs_processed/agentic-imodels/`](result_libs_processed/agentic-imodels/) | Curated, installable Python package of 10 Pareto-frontier models drawn from `result_libs/`. |
-| [`generalization_experiments/`](generalization_experiments/) | Re-evaluate evolved models on **new** OpenML regression suites and a **new 157-test** interpretability suite to check generalization. |
-| [`e2e_experiments/`](e2e_experiments/) | Downstream end-to-end evaluation: equip Claude Code, Codex, and Copilot CLI with the evolved models and measure their performance on the [BLADE](https://github.com/behavioral-data/blade) benchmark. |
-| [`paper-imodels-agentic/`](paper-imodels-agentic/) | NeurIPS 2026 paper source (`main.tex`, `figures/`, `tables/`). |
+| `agentic_imodels/` | Canonical installable package. |
+| `SKILL.md` | Canonical agent skill entrypoint. |
+| `evolve/` | Claude-oriented model evolution loop. |
+| `evolve_codex/` | Codex-oriented model evolution loop. |
+| `result_libs/` | Raw generated models and evaluation outputs. |
+| `result_libs_processed/` | Historical processed package snapshot and extraction scripts. |
+| `generalization_experiments/` | Held-out regression and interpretability checks. |
+| `e2e_experiments/` | BLADE benchmark experiments using the package/skill. |
 
-## Discovered models
+Wheels contain only the runtime package. Source distributions include the package, root skill, license, README, and package docs.
 
-Curated highlights from [`agentic-imodels`](result_libs_processed/agentic-imodels/). **Rank** is mean global RMSE rank across 65 dev datasets (lower is better). **Test interp** is fraction passed on the held-out 157-test generalization suite. Reference points: TabPFN baseline rank 94.5 / test interp 0.17; OLS baseline rank 354.5 / test interp 0.69.
+## Citation
 
-| Class | Rank ↓ | Dev interp ↑ | Test interp ↑ | Idea |
-| --- | ---: | ---: | ---: | --- |
-| `HingeEBMRegressor` | 108.2 | 0.65 | 0.71 | Lasso on hinge basis + hidden EBM on residuals; sparse linear display. |
-| `DistilledTreeBlendAtlasRegressor` | 139.7 | 1.00 | 0.71 | Ridge student distilled from GBM+RF teachers, shown with a probe-answer "atlas" card. |
-| `DualPathSparseSymbolicRegressor` | 163.5 | 0.70 | 0.71 | GBM/RF/Ridge blend for `predict`, sparse symbolic equation for display. |
-| `HybridGAM` | 163.8 | 0.72 | 0.68 | SmartAdditiveGAM display + hidden RF residual corrector. |
-| `TeacherStudentRuleSplineRegressor` | 204.0 | 0.61 | **0.80** | GBM teacher + sparse symbolic student over hinge/step/interaction terms. |
-| `SparseSignedBasisPursuitRegressor` | 272.7 | 0.67 | 0.76 | Forward-selected signed basis (linear/hinge/square/interaction) + ridge refit. |
-| `HingeGAMRegressor` | 280.2 | 0.56 | 0.78 | Pure Lasso on a 10-breakpoint hinge basis; predict = display. |
-| `WinsorizedSparseOLSRegressor` | 326.9 | 0.65 | 0.73 | Clip features to `[p1, p99]`, LassoCV select top-8, OLS refit. |
-| `TinyDTDepth2Regressor` | 334.0 | 0.67 | 0.71 | Depth-2 decision tree (4 leaves). |
-| `SmartAdditiveRegressor` | 354.3 | 0.74 | 0.73 | Adaptive-linearization GAM — Laplacian-smoothed boosted stumps per feature. |
-
-Two stylistic patterns emerge:
-
-- **Display-predict decoupled** (`HingeEBM`, `HybridGAM`, `DistilledTreeBlendAtlas`, `DualPathSparseSymbolic`, `TeacherStudentRuleSpline`) — a hidden corrector improves prediction while `__str__` stays a clean formula. Pick these for the lowest predictive rank.
-- **Honest** (`SmoothGAM`, `HingeGAM`, `WinsorizedSparseOLS`, `SparseSignedBasisPursuit`, `TinyDT`) — `predict` and `__str__` agree, no silent corrector. Pick these when the printed formula must actually be what runs.
-
-## How the loop works
-
-```
-        +-----------------------------+
-        | program.md (agent prompt)   |
-        +-----------------------------+
-                       |
-                       v
-   +----------------------------------------+
-   | edit interpretable_regressor.py        |  <-- only file the agent touches
-   +----------------------------------------+
-                       |
-                       v
-   +----------------------------------------+
-   | run_baselines.py / src/performance_eval|  predictive performance (rank)
-   | src/interp_eval.py                     |  43 LLM-graded interp tests
-   +----------------------------------------+
-                       |
-                       v
-   +----------------------------------------+
-   | results/overall_results.csv            |  keep / discard / crash
-   +----------------------------------------+
-                       |
-                       └──> next iteration
-```
-
-Each iteration is a single git commit. Both metrics matter — neither is a hard constraint. The agent is asked to find Pareto improvements over a strong baseline panel (OLS, Lasso, RidgeCV, EBM, RandomForest, GBM, TabPFN, …). See [`evolve/program.md`](evolve/program.md) for the exact protocol the agent follows.
-
-## Generalization & end-to-end results
-
-- **Generalization** ([`generalization_experiments/`](generalization_experiments/)): the evolved models retain their Pareto advantage on **new** OpenML regression suites and on a **new 157-test** interpretability suite written from scratch (separate from the 43 dev tests).
-- **End-to-end ADS** ([`e2e_experiments/`](e2e_experiments/)): plugging the evolved models into Claude Code, Codex, and Copilot CLI improves their scores on the BLADE end-to-end data-science benchmark by **8%–47%** vs. standard interpretability tools.
-
-## Related
-
-- [`imodels`](https://github.com/csinva/imodels) — the human-designed sibling library this project extends.
-- [BLADE](https://github.com/behavioral-data/blade) — end-to-end ADS benchmark used in `e2e_experiments/`.
-- [TabArena](https://github.com/autogluon/tabrepo) and [PMLB](https://github.com/EpistasisLab/pmlb) — regression dataset sources.
-
-## License
-
-MIT.
-
-## Reference
-
-Please cite the package if you use it in an academic work :)
-
-```r
+```bibtex
 @misc{singh2026agenticimodels,
-      title={Agentic-imodels: Evolving agentic interpretability tools via autoresearch}, 
+      title={Agentic-imodels: Evolving agentic interpretability tools via autoresearch},
       author={Chandan Singh and Yan Shuo Tan and Weijia Xu and Zelalem Gero and Weiwei Yang and Michel Galley and Jianfeng Gao},
       year={2026},
       eprint={2605.03808},
       archivePrefix={arXiv},
       primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2605.03808}, 
+      url={https://arxiv.org/abs/2605.03808},
 }
 ```
+
+## License
+
+MIT.
