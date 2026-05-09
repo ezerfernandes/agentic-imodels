@@ -1,0 +1,2 @@
+"""Categorical-regression autoresearch harness."""
+
