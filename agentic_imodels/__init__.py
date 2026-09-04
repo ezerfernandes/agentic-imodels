@@ -15,23 +15,23 @@ __all__ = [
     "TinyDTDepth2Regressor",
 ]
 
-from .hinge_ebm import HingeEBMRegressor
-from .hybrid_gam import HybridGAM
-from .smooth_additive_gam import SmartAdditiveRegressor
-from .hinge_gam import HingeGAMRegressor
-from .teacher_student_rule_spline import TeacherStudentRuleSplineRegressor
-from .dual_path_sparse_symbolic import DualPathSparseSymbolicRegressor
-from .sparse_signed_basis_pursuit import SparseSignedBasisPursuitRegressor
 from .distilled_tree_blend_atlas import DistilledTreeBlendAtlasRegressor
+from .dual_path_sparse_symbolic import DualPathSparseSymbolicRegressor
+from .hinge_ebm import HingeEBMRegressor
+from .hinge_gam import HingeGAMRegressor
+from .hybrid_gam import HybridGAM
 from .registry import (
-    DECOUPLED_MODELS,
-    HONEST_MODELS,
-    MODEL_REGISTRY,
-    ModelInfo,
-    get_model_info,
+    DECOUPLED_MODELS,  # noqa: F401
+    HONEST_MODELS,  # noqa: F401
+    MODEL_REGISTRY,  # noqa: F401
+    ModelInfo,  # noqa: F401
+    get_model_info,  # noqa: F401
 )
-from .winsorized_sparse_ols import WinsorizedSparseOLSRegressor
+from .smooth_additive_gam import SmartAdditiveRegressor
+from .sparse_signed_basis_pursuit import SparseSignedBasisPursuitRegressor
+from .teacher_student_rule_spline import TeacherStudentRuleSplineRegressor
 from .tiny_dt import TinyDTDepth2Regressor
+from .winsorized_sparse_ols import WinsorizedSparseOLSRegressor
 
 try:
     __version__ = _pkg_version("agentic-imodels")

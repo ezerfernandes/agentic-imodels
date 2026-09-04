@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Ruff check
+        run: uv run ruff check agentic_imodels tests
+      - name: Ruff format check
+        run: uv run ruff format --check agentic_imodels tests
+      - name: Run fast tests
+        run: uv run python -m pytest -q -m "not slow"
+      - name: Build package
+        run: uv run python -m build
+      - name: Check wheel contents
+        run: >-
+          uv run python -c "import glob, zipfile; names =
+          zipfile.ZipFile(next(iter(glob.glob('dist/*.whl')))).namelist();
+          assert names and all(name.startswith('agentic_imodels') for name in names), names"
+
+  slow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Run slow tests
+        run: uv run python -m pytest -q -m slow
+      - name: Run California housing end to end
+        run: |
+          set -o pipefail
+          uv run python scripts/e2e_housing.py --json e2e.json | tee e2e-displays.txt
+      - name: Upload slow-run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-housing-evidence
+          path: |
+            e2e.json
+            e2e-displays.txt

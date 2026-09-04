@@ -1,6 +1,7 @@
 """sparse_signed_basis_pursuit — SparseSignedBasisPursuitRegressor from the agentic-imodels library.
 
-Generated from: result_libs/apr17-codex-5.3-effort=high/interpretable_regressors_lib/success/interpretable_regressor_029630d_sparse_signed_basis_pursuit.py
+Generated from: result_libs/apr17-codex-5.3-effort=high/
+    interpretable_regressors_lib/success/interpretable_regressor_029630d_sparse_signed_basis_pursuit.py
 
 Shorthand: SparseSignedBasisPursuit_v1
 Mean global rank (lower is better): 272.70   (pooled 65 dev datasets)
@@ -9,24 +10,25 @@ Interpretability (fraction passed, higher is better):
     test (157 tests): 0.758
 """
 
-import csv
-import os
-import subprocess
-import sys
-import time
-from collections import defaultdict
-
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.utils.validation import check_is_fitted
 
+from ._names import (
+    align_feature_names,
+    format_feature_name,
+    input_feature_names,
+    resolve_feature_names,
+    validate_fit_data,
+    validate_predict_data,
+)
 
 # ---------------------------------------------------------------------------
 # Interpretable Regressor (edit this, everything in this class is fair game)
 # ---------------------------------------------------------------------------
 
 
-class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
+class SparseSignedBasisPursuitRegressor(RegressorMixin, BaseEstimator):
     """
     Interpretable sparse dictionary regressor.
 
@@ -51,6 +53,7 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         coef_tol=1e-10,
         improvement_tol=1e-6,
         random_state=0,
+        feature_names=None,
     ):
         self.max_terms = max_terms
         self.min_terms = min_terms
@@ -63,6 +66,12 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         self.coef_tol = coef_tol
         self.improvement_tol = improvement_tol
         self.random_state = random_state
+        self.feature_names = feature_names
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.sparse = False
+        return tags
 
     @staticmethod
     def _rmse(y_true, y_pred):
@@ -129,29 +138,46 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         if kind == "lin":
             j = spec[1]
             c = self.feature_centers_[j]
-            return f"(x{j} - {c:.{decimals}f})"
+            name = format_feature_name(self.feature_names_in_[j])
+            return f"({name} - {c:.{decimals}f})"
         if kind == "plus":
             j = spec[1]
             c = self.feature_centers_[j]
-            return f"max(0, x{j} - {c:.{decimals}f})"
+            name = format_feature_name(self.feature_names_in_[j])
+            return f"max(0, {name} - {c:.{decimals}f})"
         if kind == "minus":
             j = spec[1]
             c = self.feature_centers_[j]
-            return f"max(0, {c:.{decimals}f} - x{j})"
+            name = format_feature_name(self.feature_names_in_[j])
+            return f"max(0, {c:.{decimals}f} - {name})"
         if kind == "sq":
             j = spec[1]
             c = self.feature_centers_[j]
-            return f"(x{j} - {c:.{decimals}f})^2"
+            name = format_feature_name(self.feature_names_in_[j])
+            return f"({name} - {c:.{decimals}f})^2"
         i, j = spec[1], spec[2]
         ci = self.feature_centers_[i]
         cj = self.feature_centers_[j]
-        return f"(x{i} - {ci:.{decimals}f})*(x{j} - {cj:.{decimals}f})"
+        left = format_feature_name(self.feature_names_in_[i])
+        right = format_feature_name(self.feature_names_in_[j])
+        return f"({left} - {ci:.{decimals}f})*({right} - {cj:.{decimals}f})"
 
     def fit(self, X, y):
+        X_raw = X
+        input_names = input_feature_names(X)
+        X, y = validate_fit_data(self, X, y)
         X = np.asarray(X, dtype=float)
         y = np.asarray(y, dtype=float).reshape(-1)
         n_samples, n_features = X.shape
         self.n_features_in_ = n_features
+        self.feature_names_in_ = np.asarray(
+            resolve_feature_names(X_raw, n_features, self.feature_names), dtype=object
+        )
+        self.input_feature_names_in_ = (
+            np.asarray(input_names, dtype=object)
+            if getattr(X_raw, "columns", None) is not None
+            else None
+        )
         self.feature_centers_ = np.median(X, axis=0).astype(float)
 
         tr_idx, va_idx = self._split_indices(n_samples)
@@ -248,7 +274,9 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
             current_pred_tr = local_best["pred_tr"]
             residual = ytr - current_pred_tr
 
-            if best_global is None or local_best["obj"] < best_global["obj"] - float(self.improvement_tol):
+            if best_global is None or local_best["obj"] < best_global["obj"] - float(
+                self.improvement_tol
+            ):
                 best_global = {
                     "obj": float(local_best["obj"]),
                     "alpha": float(local_best["alpha"]),
@@ -299,7 +327,7 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         self.term_coefs_ = self.term_coefs_[nonzero]
 
         feature_imp = np.zeros(n_features, dtype=float)
-        for spec, coef in zip(self.term_specs_, self.term_coefs_):
+        for spec, coef in zip(self.term_specs_, self.term_coefs_, strict=True):
             if spec[0] == "int":
                 feature_imp[spec[1]] += 0.5 * abs(float(coef))
                 feature_imp[spec[2]] += 0.5 * abs(float(coef))
@@ -323,11 +351,10 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
 
     def predict(self, X):
         check_is_fitted(self, ["intercept_", "term_specs_", "term_coefs_", "feature_importance_"])
-        X = np.asarray(X, dtype=float)
-        if X.ndim == 1:
-            X = X.reshape(1, -1)
+        X = align_feature_names(X, self.feature_names_in_, self.input_feature_names_in_)
+        X = np.asarray(validate_predict_data(self, X), dtype=float)
         pred = np.full(X.shape[0], self.intercept_, dtype=float)
-        for spec, coef in zip(self.term_specs_, self.term_coefs_):
+        for spec, coef in zip(self.term_specs_, self.term_coefs_, strict=True):
             pred += float(coef) * self._eval_spec(X, spec)
         return pred
 
@@ -335,7 +362,9 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         check_is_fitted(self, ["intercept_", "term_specs_", "term_coefs_", "feature_importance_"])
         decimals = int(getattr(self, "round_decimals_selected_", 6))
 
-        terms = [(spec, float(c)) for spec, c in zip(self.term_specs_, self.term_coefs_)]
+        terms = [
+            (spec, float(c)) for spec, c in zip(self.term_specs_, self.term_coefs_, strict=True)
+        ]
         terms.sort(key=lambda t: abs(t[1]), reverse=True)
 
         rhs_parts = [f"{self.intercept_:+.{decimals}f}"]
@@ -345,7 +374,6 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
 
         lines = [
             "Sparse Signed-Basis Pursuit Regressor",
-            "Answer protocol: reply with ONE numeric value only (no words, no extra numbers).",
             "Exact prediction equation:",
             "  y = " + equation,
             "",
@@ -353,16 +381,29 @@ class SparseSignedBasisPursuitRegressor(BaseEstimator, RegressorMixin):
         ]
         if terms:
             for i, (spec, coef) in enumerate(terms, 1):
-                lines.append(f"  {i:2d}. coef={coef:+.{decimals}f}  term={self._format_term(spec, decimals)}")
+                lines.append(
+                    f"  {i:2d}. coef={coef:+.{decimals}f}  term={self._format_term(spec, decimals)}"
+                )
         else:
             lines.append("  (none)")
 
         active = [int(i) for i in self.selected_features_]
         lines.append("")
-        lines.append("Active features: " + (", ".join(f"x{i}" for i in active) if active else "none"))
+        lines.append(
+            "Active features: "
+            + (
+                ", ".join(format_feature_name(self.feature_names_in_[i]) for i in active)
+                if active
+                else "none"
+            )
+        )
         if self.n_features_in_ <= 30 and len(active) < self.n_features_in_:
             active_set = set(active)
-            zero_feats = [f"x{i}" for i in range(self.n_features_in_) if i not in active_set]
+            zero_feats = [
+                format_feature_name(self.feature_names_in_[i])
+                for i in range(self.n_features_in_)
+                if i not in active_set
+            ]
             lines.append("Zero-contribution features: " + ", ".join(zero_feats))
 
         lines.append(f"Selected ridge alpha: {self.alpha_selected_:.6g}")

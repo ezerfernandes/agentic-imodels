@@ -18,16 +18,61 @@ Read and follow ./SKILL.md for interpretable tabular regression tasks.
 
 The root is intentional: it is both the package install target and the skill entrypoint.
 
+## Install the skill
+
+Install the skill in the same environment as the Python package so an agent can both load the instructions and import `agentic_imodels`.
+
+### Claude Code
+
+For a user-scope install, copy the skill into `~/.claude/skills/agentic-imodels/`:
+
+```bash
+mkdir -p ~/.claude/skills/agentic-imodels
+curl -fsSL https://raw.githubusercontent.com/ezerfernandes/agentic-imodels/main/SKILL.md \
+  -o ~/.claude/skills/agentic-imodels/SKILL.md
+```
+
+For a project-scope install, run the equivalent commands from the project root:
+
+```bash
+mkdir -p .claude/skills/agentic-imodels
+curl -fsSL https://raw.githubusercontent.com/ezerfernandes/agentic-imodels/main/SKILL.md \
+  -o .claude/skills/agentic-imodels/SKILL.md
+```
+
+The project-scope copy can be checked into the repository when the whole team should use the skill.
+
+### Codex CLI
+
+The current [Codex skill documentation](https://developers.openai.com/codex/skills/) lists `~/.agents/skills` as the user-scope location and `.agents/skills` in a repository as the project-scope location. Create a directory named `agentic-imodels` under the chosen location and copy this file to its `SKILL.md`:
+
+```bash
+# User scope
+mkdir -p ~/.agents/skills/agentic-imodels
+cp SKILL.md ~/.agents/skills/agentic-imodels/SKILL.md
+
+# Project scope (run from the repository root)
+mkdir -p .agents/skills/agentic-imodels
+cp SKILL.md .agents/skills/agentic-imodels/SKILL.md
+```
+
+Codex detects skill changes automatically; restart it if a newly installed skill does not appear. For a local checkout, `scripts/install_skill.sh` performs the Claude Code user-scope copy. The package must also be installed in the environment used by the agent:
+
+```bash
+uv add git+https://github.com/ezerfernandes/agentic-imodels
+```
+
 ## What Agents Should Do
 
 When the user has a tabular regression question and wants interpretability, the agent should:
 
-1. Install or import `agentic_imodels`.
-2. Identify the target column, candidate predictors, and controls.
-3. Fit at least one honest model and one high-rank decoupled model when the user wants a robust interpretation.
-4. Print the fitted models.
-5. Use the printed text to describe feature direction, magnitude, thresholds, and robustness.
-6. Explicitly disclose when a model is display-predict decoupled.
+1. Keep `X` as a DataFrame so printed models use real column names.
+2. Install or import `agentic_imodels`.
+3. Identify the target column, candidate predictors, and controls.
+4. Fit at least one honest model and one high-rank decoupled model when the user wants a robust interpretation.
+5. Print the fitted models.
+6. Use the printed text to describe feature direction, magnitude, thresholds, and robustness.
+7. Explicitly disclose when a model is display-predict decoupled.
 
 ## Recommended Agent Defaults
 

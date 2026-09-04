@@ -76,6 +76,7 @@ dependencies = [
 dev = [
     { name = "build" },
     { name = "pytest" },
+    { name = "ruff" },
 ]
 research = [
     { name = "adjusttext" },
@@ -119,6 +120,7 @@ requires-dist = [
     { name = "pygam", marker = "extra == 'research'", specifier = ">=0.12.0" },
     { name = "pypdf2", marker = "extra == 'research'", specifier = ">=3.0.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
     { name = "scikit-learn", specifier = ">=1.3" },
     { name = "tabpfn", marker = "extra == 'research'", specifier = ">=7.0.0" },
     { name = "torch", marker = "extra == 'research'", specifier = ">=2.10.0" },

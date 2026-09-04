@@ -1,6 +1,6 @@
 ---
 name: agentic-imodels
-description: Use for tabular regression tasks where the fitted model must be readable by humans or LLM agents. Provides sklearn-compatible interpretable regressors and model-selection guidance.
+description: Use when the user wants an interpretable, explainable or transparent tabular regression model, a printed equation, rules, GAM or small tree, or asks to explain a numeric relationship without SHAP. Provides sklearn-compatible regressors whose str(model) is the explanation.
 ---
 
 # agentic-imodels
@@ -48,20 +48,37 @@ print(model)
 
 Always print the fitted model. The printed representation is the core artifact this package provides.
 
+## Feature names
+
+Keep `X` as a pandas DataFrame when it has meaningful column names; fitted displays then use names such as `MedInc` and `Latitude`. You can also pass `feature_names=[...]` to any public estimator when fitting an array. An ndarray or list without explicit names uses positional names `x0`, `x1`, and so on. DataFrame predictions may use a different column order, but missing fitted columns raise `ValueError`.
+
 ## Choosing A Model
 
-| Situation | Model | Why |
-| --- | --- | --- |
-| User asks for a general interpretable regressor | `HingeEBMRegressor` | Best predictive rank in the curated set with a readable display. |
-| Printed model must match prediction | `HingeGAMRegressor` or `SmartAdditiveRegressor` | Honest models with direct additive/threshold displays. |
-| Maximum LLM-readability | `TeacherStudentRuleSplineRegressor` | Highest held-out interpretability score. |
-| Small tree explanation | `TinyDTDepth2Regressor` | Four-leaf depth-2 decision tree. |
-| Sparse linear explanation | `WinsorizedSparseOLSRegressor` | Outlier clipping plus sparse OLS-style display. |
+| Model | Category | Summary | Predict note | Provenance | Metrics |
+| --- | --- | --- | --- | --- | --- |
+| `HingeEBMRegressor` | display-predict decoupled | Lasso on hinge basis plus hidden EBM residual corrector. | predict adds a hidden EBM residual corrector to the displayed hinge formula. | success @ apr9-claude-effort=medium-main-result | measured |
+| `DistilledTreeBlendAtlasRegressor` | display-predict decoupled | Ridge student distilled from GBM and RF teachers, displayed as an atlas card. | predict returns the calibrated GBM/RF/student blend, not the displayed sparse equation. | success @ apr19-codex-5.3-effort=xhigh | unmeasured-after-fix |
+| `DualPathSparseSymbolicRegressor` | display-predict decoupled | Sparse symbolic display with a blended GBM/RF/Ridge predictor. | predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation. | failure @ apr17-codex-5.3-effort=high | measured |
+| `HybridGAM` | display-predict decoupled | Smart additive GAM display plus hidden random-forest residual corrector. | predict adds a shrunk random-forest residual correction to the displayed additive model. | failure @ apr20-claude-4.7-effort=medium-rerun4 | measured |
+| `TeacherStudentRuleSplineRegressor` | display-predict decoupled | GBM teacher with sparse symbolic student over rules, splines, and interactions. | predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation. | failure @ apr17-codex-5.3-effort=high | measured |
+| `SparseSignedBasisPursuitRegressor` | honest | Forward-selected signed basis with ridge refit and rounded coefficients. | predict computes exactly the displayed form. | success @ apr17-codex-5.3-effort=high | measured |
+| `HingeGAMRegressor` | honest | Pure Lasso on hinge features with ten breakpoints. | predict computes exactly the displayed form. | failure @ apr9-claude-effort=medium-main-result | measured |
+| `WinsorizedSparseOLSRegressor` | honest | Winsorized features, LassoCV selection, and OLS refit. | predict computes exactly the displayed form. | failure @ apr19-claude-4.7-effort=medium-rerun2 | measured |
+| `TinyDTDepth2Regressor` | honest | Depth-2 decision tree with four leaves. | predict computes exactly the displayed form. | failure @ apr19-claude-4.7-effort=medium-rerun3 | unmeasured-after-fix |
+| `SmartAdditiveRegressor` | honest | Laplacian-smoothed boosted stumps rendered as linear or short piecewise terms. | predict computes exactly the displayed form. | failure @ apr9-claude-effort=medium-main-result | measured |
+
+Rank and interpretability were measured by the evolution harness on 65 development datasets (rank) and 157 held-out LLM-graded tests (interp), on ndarray input, before the fixes listed in CHANGELOG. 'failure' provenance means the model did not improve on its predecessor within its own run but was selected for architectural diversity.
 
 Model categories:
 
-- **Honest:** `SmartAdditiveRegressor`, `HingeGAMRegressor`, `SparseSignedBasisPursuitRegressor`, `WinsorizedSparseOLSRegressor`, `TinyDTDepth2Regressor`. The display closely matches what `predict` computes.
+- **Honest:** `SparseSignedBasisPursuitRegressor`, `HingeGAMRegressor`, `WinsorizedSparseOLSRegressor`, `TinyDTDepth2Regressor`, `SmartAdditiveRegressor`. The display closely matches what `predict` computes.
+  - `predict computes exactly the displayed form.`
 - **Display-predict decoupled:** `HingeEBMRegressor`, `DistilledTreeBlendAtlasRegressor`, `DualPathSparseSymbolicRegressor`, `HybridGAM`, `TeacherStudentRuleSplineRegressor`. The display is a readable summary, while `predict` may include a hidden residual corrector or teacher ensemble.
+  - `HingeEBMRegressor`: `predict adds a hidden EBM residual corrector to the displayed hinge formula.`
+  - `DistilledTreeBlendAtlasRegressor`: `predict returns the calibrated GBM/RF/student blend, not the displayed sparse equation.`
+  - `DualPathSparseSymbolicRegressor`: `predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation.`
+  - `HybridGAM`: `predict adds a shrunk random-forest residual correction to the displayed additive model.`
+  - `TeacherStudentRuleSplineRegressor`: `predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation.`
 
 If you use a decoupled model, disclose that the printed text is not the complete computational graph.
 
@@ -98,6 +115,7 @@ Return the fitted model text verbatim when practical. Then summarize:
 - thresholds or nonlinear shapes
 - whether honest and decoupled models agree
 - any preprocessing assumptions
+- Never report `x3`-style positional names when real DataFrame column names exist
 
 Good phrasing for decoupled models:
 

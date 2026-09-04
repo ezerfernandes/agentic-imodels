@@ -43,6 +43,8 @@ Keep the estimator module self-contained. Do not add research harness imports to
 Run these before publishing or handing off package changes:
 
 ```bash
+uv run --extra dev ruff check agentic_imodels tests
+uv run --extra dev ruff format --check agentic_imodels tests
 uv run --extra dev python -m pytest -q
 uv run --extra dev python -m build
 uv run --extra dev python -c "from agentic_imodels import MODEL_REGISTRY; print(len(MODEL_REGISTRY))"
@@ -56,6 +58,10 @@ uv run --extra dev python -c "import tarfile; t=tarfile.open('dist/agentic_imode
 ```
 
 The wheel should contain runtime package files and dist metadata. The source distribution should contain the runtime package, root docs, skill file, license, README, and package docs.
+
+## Continuous Integration
+
+GitHub Actions mirrors the local Ruff, fast-test, build, and wheel-content checks on Python 3.10–3.12. A Python 3.12 slow job runs the California-housing test and end-to-end script, uploading the JSON summary and printed displays as reviewable artifacts.
 
 ## Release Checklist
 

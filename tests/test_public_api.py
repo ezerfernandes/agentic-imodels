@@ -18,6 +18,9 @@ def test_each_registry_entry_has_required_metadata() -> None:
         assert 0 <= info.test_interpretability <= 1
         assert info.module.startswith("agentic_imodels.")
         assert info.summary
+        assert info.provenance
+        assert info.metrics_status in {"measured", "unmeasured-after-fix"}
+        assert info.predict_notes
 
 
 def test_honest_models_subset_registry() -> None:

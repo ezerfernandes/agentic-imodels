@@ -28,3 +28,7 @@ paper-imodels-agentic
 **.log
 **.claude
 **.venv*
+
+# bv (beads viewer) local config and caches
+.bv/
+.snapshots/

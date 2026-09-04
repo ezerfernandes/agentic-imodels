@@ -17,6 +17,9 @@ class ModelInfo:
     test_interpretability: float
     category: str
     summary: str
+    provenance: str
+    metrics_status: str
+    predict_notes: str
 
 
 MODEL_REGISTRY: dict[str, ModelInfo] = {
@@ -29,6 +32,11 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.707,
         category="display-predict decoupled",
         summary="Lasso on hinge basis plus hidden EBM residual corrector.",
+        provenance="success @ apr9-claude-effort=medium-main-result",
+        metrics_status="measured",
+        predict_notes=(
+            "predict adds a hidden EBM residual corrector to the displayed hinge formula."
+        ),
     ),
     "DistilledTreeBlendAtlasRegressor": ModelInfo(
         name="DistilledTreeBlendAtlasRegressor",
@@ -39,6 +47,12 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.707,
         category="display-predict decoupled",
         summary="Ridge student distilled from GBM and RF teachers, displayed as an atlas card.",
+        provenance="success @ apr19-codex-5.3-effort=xhigh",
+        metrics_status="unmeasured-after-fix",
+        predict_notes=(
+            "predict returns the calibrated GBM/RF/student blend, not the displayed "
+            "sparse equation."
+        ),
     ),
     "DualPathSparseSymbolicRegressor": ModelInfo(
         name="DualPathSparseSymbolicRegressor",
@@ -49,6 +63,12 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.713,
         category="display-predict decoupled",
         summary="Sparse symbolic display with a blended GBM/RF/Ridge predictor.",
+        provenance="failure @ apr17-codex-5.3-effort=high",
+        metrics_status="measured",
+        predict_notes=(
+            "predict uses the teacher ensemble by default; pass predict_with='student' to "
+            "predict with the displayed equation."
+        ),
     ),
     "HybridGAM": ModelInfo(
         name="HybridGAM",
@@ -59,6 +79,12 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.675,
         category="display-predict decoupled",
         summary="Smart additive GAM display plus hidden random-forest residual corrector.",
+        provenance="failure @ apr20-claude-4.7-effort=medium-rerun4",
+        metrics_status="measured",
+        predict_notes=(
+            "predict adds a shrunk random-forest residual correction to the displayed "
+            "additive model."
+        ),
     ),
     "TeacherStudentRuleSplineRegressor": ModelInfo(
         name="TeacherStudentRuleSplineRegressor",
@@ -69,6 +95,12 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.803,
         category="display-predict decoupled",
         summary="GBM teacher with sparse symbolic student over rules, splines, and interactions.",
+        provenance="failure @ apr17-codex-5.3-effort=high",
+        metrics_status="measured",
+        predict_notes=(
+            "predict uses the teacher ensemble by default; pass predict_with='student' to "
+            "predict with the displayed equation."
+        ),
     ),
     "SparseSignedBasisPursuitRegressor": ModelInfo(
         name="SparseSignedBasisPursuitRegressor",
@@ -79,6 +111,9 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.758,
         category="honest",
         summary="Forward-selected signed basis with ridge refit and rounded coefficients.",
+        provenance="success @ apr17-codex-5.3-effort=high",
+        metrics_status="measured",
+        predict_notes="predict computes exactly the displayed form.",
     ),
     "HingeGAMRegressor": ModelInfo(
         name="HingeGAMRegressor",
@@ -89,6 +124,9 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.783,
         category="honest",
         summary="Pure Lasso on hinge features with ten breakpoints.",
+        provenance="failure @ apr9-claude-effort=medium-main-result",
+        metrics_status="measured",
+        predict_notes="predict computes exactly the displayed form.",
     ),
     "WinsorizedSparseOLSRegressor": ModelInfo(
         name="WinsorizedSparseOLSRegressor",
@@ -99,6 +137,9 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.726,
         category="honest",
         summary="Winsorized features, LassoCV selection, and OLS refit.",
+        provenance="failure @ apr19-claude-4.7-effort=medium-rerun2",
+        metrics_status="measured",
+        predict_notes="predict computes exactly the displayed form.",
     ),
     "TinyDTDepth2Regressor": ModelInfo(
         name="TinyDTDepth2Regressor",
@@ -109,6 +150,9 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.713,
         category="honest",
         summary="Depth-2 decision tree with four leaves.",
+        provenance="failure @ apr19-claude-4.7-effort=medium-rerun3",
+        metrics_status="unmeasured-after-fix",
+        predict_notes="predict computes exactly the displayed form.",
     ),
     "SmartAdditiveRegressor": ModelInfo(
         name="SmartAdditiveRegressor",
@@ -119,17 +163,16 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         test_interpretability=0.733,
         category="honest",
         summary="Laplacian-smoothed boosted stumps rendered as linear or short piecewise terms.",
+        provenance="failure @ apr9-claude-effort=medium-main-result",
+        metrics_status="measured",
+        predict_notes="predict computes exactly the displayed form.",
     ),
 }
 
-HONEST_MODELS = tuple(
-    name for name, info in MODEL_REGISTRY.items() if info.category == "honest"
-)
+HONEST_MODELS = tuple(name for name, info in MODEL_REGISTRY.items() if info.category == "honest")
 
 DECOUPLED_MODELS = tuple(
-    name
-    for name, info in MODEL_REGISTRY.items()
-    if info.category == "display-predict decoupled"
+    name for name, info in MODEL_REGISTRY.items() if info.category == "display-predict decoupled"
 )
 
 

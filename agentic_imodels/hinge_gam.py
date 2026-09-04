@@ -1,6 +1,7 @@
 """hinge_gam — HingeGAMRegressor from the agentic-imodels library.
 
-Generated from: result_libs/apr9-claude-effort=medium-main-result/interpretable_regressors_lib/failure/interpretable_regressor_d551a55_hinge_gam_10bp.py
+Generated from: result_libs/apr9-claude-effort=medium-main-result/
+    interpretable_regressors_lib/failure/interpretable_regressor_d551a55_hinge_gam_10bp.py
 
 Shorthand: HingeGAM_10bp
 Mean global rank (lower is better): 280.18   (pooled 65 dev datasets)
@@ -9,19 +10,22 @@ Interpretability (fraction passed, higher is better):
     test (157 tests): 0.783
 """
 
-import csv, os, subprocess, sys, time
-from collections import defaultdict
-
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.linear_model import LassoCV, RidgeCV
-from sklearn.tree import DecisionTreeRegressor, export_text
+from sklearn.linear_model import LassoCV
 from sklearn.utils.validation import check_is_fitted
-from interpret.glassbox import ExplainableBoostingRegressor
+
+from ._names import (
+    align_feature_names,
+    format_feature_name,
+    input_feature_names,
+    resolve_feature_names,
+    validate_fit_data,
+    validate_predict_data,
+)
 
 
-
-class HingeGAMRegressor(BaseEstimator, RegressorMixin):
+class HingeGAMRegressor(RegressorMixin, BaseEstimator):
     """
     HingeGAM: Lasso on hinge basis (piecewise-linear) + conditional EBM,
     displayed using the SmoothAdditiveGAM pipeline.
@@ -34,25 +38,51 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
     Predict uses Lasso+EBM (consistent for linear features via R²>0.70).
     """
 
-    def __init__(self, n_knots=2, max_input_features=15,
-                 ebm_outer_bags=2, ebm_max_rounds=500):
+    def __init__(
+        self,
+        n_knots=2,
+        max_input_features=15,
+        ebm_outer_bags=2,
+        ebm_max_rounds=500,
+        feature_names=None,
+    ):
         self.n_knots = n_knots
         self.max_input_features = max_input_features
         self.ebm_outer_bags = ebm_outer_bags
         self.ebm_max_rounds = ebm_max_rounds
+        self.feature_names = feature_names
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.sparse = False
+        return tags
 
     def fit(self, X, y):
+        X_raw = X
+        input_names = input_feature_names(X)
+        X, y = validate_fit_data(self, X, y)
         X = np.asarray(X, dtype=np.float64)
         y = np.asarray(y, dtype=np.float64)
         self.n_features_in_ = X.shape[1]
+        self.feature_names_in_ = np.asarray(
+            resolve_feature_names(X_raw, self.n_features_in_, self.feature_names), dtype=object
+        )
+        self.input_feature_names_in_ = (
+            np.asarray(input_names, dtype=object)
+            if getattr(X_raw, "columns", None) is not None
+            else None
+        )
         n_samples, n_orig = X.shape
 
         # Feature selection
         if n_orig > self.max_input_features:
-            corrs = np.array([abs(np.corrcoef(X[:, j], y)[0, 1])
-                              if np.std(X[:, j]) > 1e-10 else 0
-                              for j in range(n_orig)])
-            self.selected_ = np.sort(np.argsort(corrs)[-self.max_input_features:])
+            corrs = np.array(
+                [
+                    abs(np.corrcoef(X[:, j], y)[0, 1]) if np.std(X[:, j]) > 1e-10 else 0
+                    for j in range(n_orig)
+                ]
+            )
+            self.selected_ = np.sort(np.argsort(corrs)[-self.max_input_features :])
         else:
             self.selected_ = np.arange(n_orig)
 
@@ -134,7 +164,7 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
                 for _ in range(3):
                     new_s = [smooth[0]]
                     for k in range(1, len(smooth) - 1):
-                        new_s.append(0.6 * smooth[k] + 0.2 * smooth[k-1] + 0.2 * smooth[k+1])
+                        new_s.append(0.6 * smooth[k] + 0.2 * smooth[k - 1] + 0.2 * smooth[k + 1])
                     new_s.append(smooth[-1])
                     smooth = new_s
                 intervals = smooth
@@ -148,7 +178,7 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
             j_sel = np.where(self.selected_ == j_orig)[0][0]
             xj = X_sel[:, j_sel]
             bins = np.digitize(xj, thresholds)
-            fx = np.array([intervals[min(b, len(intervals)-1)] for b in bins])
+            fx = np.array([intervals[min(b, len(intervals) - 1)] for b in bins])
             if np.std(xj) > 1e-10 and np.std(fx) > 1e-10:
                 slope = np.cov(xj, fx)[0, 1] / np.var(xj)
                 offset = np.mean(fx) - slope * np.mean(xj)
@@ -171,7 +201,8 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
 
     def predict(self, X):
         check_is_fitted(self, "lasso_")
-        X = np.asarray(X, dtype=np.float64)
+        X = align_feature_names(X, self.feature_names_in_, self.input_feature_names_in_)
+        X = np.asarray(validate_predict_data(self, X), dtype=np.float64)
         pred = self.lasso_.predict(self._build_basis(X))
         if self.ebm_ is not None:
             pred += self.ebm_.predict(X)
@@ -179,7 +210,7 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
 
     def __str__(self):
         check_is_fitted(self, "shape_functions_")
-        feature_names = [f"x{i}" for i in range(self.n_features_in_)]
+        feature_names = [format_feature_name(name) for name in self.feature_names_in_]
 
         total_importance = sum(self.feature_importances_)
         if total_importance < 1e-10:
@@ -199,20 +230,36 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
 
         combined_intercept = self.intercept_ + sum(off for _, off in linear_features.values())
 
-        lines = [f"Ridge Regression (L2 regularization, α=1.0000 chosen by CV):"]
-        terms = [f"{linear_features[j][0]:.4f}*{feature_names[j]}" for j in sorted(linear_features.keys())]
-        eq = " + ".join(terms) + f" + {combined_intercept:.4f}" if terms else f"{combined_intercept:.4f}"
+        n_breakpoints = len(self.knot_info_)
+        n_active = int(np.count_nonzero(np.abs(self.lasso_.coef_) > 1e-10))
+        lines = [
+            f"Hinge GAM (LassoCV on linear + hinge basis, alpha={self.lasso_.alpha_:.4g}, "
+            f"{n_breakpoints} breakpoints, {n_active} active terms):"
+        ]
+        terms = [
+            f"{linear_features[j][0]:.4f}*{feature_names[j]}"
+            for j in sorted(linear_features.keys())
+        ]
+        eq = (
+            " + ".join(terms) + f" + {combined_intercept:.4f}"
+            if terms
+            else f"{combined_intercept:.4f}"
+        )
         lines.append(f"  y = {eq}")
         lines.append("")
         lines.append("Coefficients:")
-        for j, (slope, _) in sorted(linear_features.items(), key=lambda x: abs(x[1][0]), reverse=True):
+        for j, (slope, _) in sorted(
+            linear_features.items(), key=lambda x: abs(x[1][0]), reverse=True
+        ):
             lines.append(f"  {feature_names[j]}: {slope:.4f}")
         lines.append(f"  intercept: {combined_intercept:.4f}")
 
         if nonlinear_features:
             lines.append("")
             lines.append("Nonlinear feature effects (piecewise corrections to add to above):")
-            for j in sorted(nonlinear_features.keys(), key=lambda j: self.feature_importances_[j], reverse=True):
+            for j in sorted(
+                nonlinear_features.keys(), key=lambda j: self.feature_importances_[j], reverse=True
+            ):
                 thresholds, intervals = nonlinear_features[j]
                 name = feature_names[j]
                 parts = []
@@ -222,7 +269,10 @@ class HingeGAMRegressor(BaseEstimator, RegressorMixin):
                     elif i == len(thresholds):
                         parts.append(f"    {name} >  {thresholds[-1]:.4f}: {val:+.4f}")
                     else:
-                        parts.append(f"    {thresholds[i-1]:.4f} < {name} <= {thresholds[i]:.4f}: {val:+.4f}")
+                        parts.append(
+                            f"    {thresholds[i - 1]:.4f} < {name} <= "
+                            f"{thresholds[i]:.4f}: {val:+.4f}"
+                        )
                 lines.append(f"  f({name}):")
                 lines.extend(parts)
 

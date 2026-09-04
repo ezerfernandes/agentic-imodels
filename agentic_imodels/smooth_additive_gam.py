@@ -1,6 +1,7 @@
 """smooth_additive_gam — SmartAdditiveRegressor from the agentic-imodels library.
 
-Generated from: result_libs/apr9-claude-effort=medium-main-result/interpretable_regressors_lib/failure/interpretable_regressor_61e149a_msl3.py
+Generated from: result_libs/apr9-claude-effort=medium-main-result/
+    interpretable_regressors_lib/failure/interpretable_regressor_61e149a_msl3.py
 
 Shorthand: SmoothGAM_msl3
 Mean global rank (lower is better): 354.32   (pooled 65 dev datasets)
@@ -9,27 +10,27 @@ Interpretability (fraction passed, higher is better):
     test (157 tests): 0.733
 """
 
-import csv
-import os
-import subprocess
-import sys
-import time
 from collections import defaultdict
 
 import numpy as np
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.linear_model import RidgeCV
-from sklearn.model_selection import KFold
-from sklearn.tree import DecisionTreeRegressor, export_text
 from sklearn.utils.validation import check_is_fitted
 
+from ._names import (
+    align_feature_names,
+    format_feature_name,
+    input_feature_names,
+    resolve_feature_names,
+    validate_fit_data,
+    validate_predict_data,
+)
 
 # ---------------------------------------------------------------------------
 # Interpretable Regressor (edit this, everything in this class is fair game)
 # ---------------------------------------------------------------------------
 
 
-class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
+class SmartAdditiveRegressor(RegressorMixin, BaseEstimator):
     """
     Greedy additive boosted stumps with adaptive display.
 
@@ -47,16 +48,33 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
     Model: y = intercept + f0(x0) + f1(x1) + ... + fp(xp)
     """
 
-    def __init__(self, n_rounds=200, learning_rate=0.1, min_samples_leaf=3):
+    def __init__(self, n_rounds=200, learning_rate=0.1, min_samples_leaf=3, feature_names=None):
         self.n_rounds = n_rounds
         self.learning_rate = learning_rate
         self.min_samples_leaf = min_samples_leaf
+        self.feature_names = feature_names
+
+    def __sklearn_tags__(self):
+        tags = super().__sklearn_tags__()
+        tags.input_tags.sparse = False
+        return tags
 
     def fit(self, X, y):
+        X_raw = X
+        input_names = input_feature_names(X)
+        X, y = validate_fit_data(self, X, y)
         X = np.asarray(X, dtype=np.float64)
         y = np.asarray(y, dtype=np.float64)
         n_samples, n_features = X.shape
         self.n_features_in_ = n_features
+        self.feature_names_in_ = np.asarray(
+            resolve_feature_names(X_raw, n_features, self.feature_names), dtype=object
+        )
+        self.input_feature_names_in_ = (
+            np.asarray(input_names, dtype=object)
+            if getattr(X_raw, "columns", None) is not None
+            else None
+        )
         self.intercept_ = float(np.mean(y))
 
         # Early stopping: hold out 20% for validation (if enough data)
@@ -76,7 +94,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
         feature_stumps = defaultdict(list)
         residuals = y_tr - self.intercept_
-        best_val_mse = float('inf')
+        best_val_mse = float("inf")
         patience_counter = 0
         patience = 20
 
@@ -101,7 +119,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                 if hi < lo:
                     continue
 
-                valid = np.where(xj_sorted[lo:hi + 1] != xj_sorted[lo + 1:hi + 2])[0] + lo
+                valid = np.where(xj_sorted[lo : hi + 1] != xj_sorted[lo + 1 : hi + 2])[0] + lo
                 if len(valid) == 0:
                     continue
 
@@ -110,7 +128,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                 right_sum = total_sum - left_sum
                 right_count = n_train - left_count
 
-                reduction = left_sum ** 2 / left_count + right_sum ** 2 / right_count
+                reduction = left_sum**2 / left_count + right_sum**2 / right_count
                 best_idx = np.argmax(reduction)
 
                 if reduction[best_idx] > best_reduction:
@@ -119,9 +137,12 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                     threshold = (xj_sorted[split_pos] + xj_sorted[split_pos + 1]) / 2
                     left_mean = left_sum[best_idx] / left_count[best_idx]
                     right_mean = right_sum[best_idx] / right_count[best_idx]
-                    best_stump = (j, threshold,
-                                  left_mean * self.learning_rate,
-                                  right_mean * self.learning_rate)
+                    best_stump = (
+                        j,
+                        threshold,
+                        left_mean * self.learning_rate,
+                        right_mean * self.learning_rate,
+                    )
 
             if best_stump is None:
                 break
@@ -168,14 +189,14 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                     hi = n_samples - min_leaf - 1
                     if hi < lo:
                         continue
-                    valid = np.where(xj_sorted[lo:hi + 1] != xj_sorted[lo + 1:hi + 2])[0] + lo
+                    valid = np.where(xj_sorted[lo : hi + 1] != xj_sorted[lo + 1 : hi + 2])[0] + lo
                     if len(valid) == 0:
                         continue
                     left_sum = cum_sum[valid]
                     left_count = valid + 1
                     right_sum = total_sum - left_sum
                     right_count = n_samples - left_count
-                    reduction = left_sum ** 2 / left_count + right_sum ** 2 / right_count
+                    reduction = left_sum**2 / left_count + right_sum**2 / right_count
                     best_idx = np.argmax(reduction)
                     if reduction[best_idx] > best_reduction:
                         best_reduction = reduction[best_idx]
@@ -183,9 +204,12 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                         threshold = (xj_sorted[split_pos] + xj_sorted[split_pos + 1]) / 2
                         left_mean = left_sum[best_idx] / left_count[best_idx]
                         right_mean = right_sum[best_idx] / right_count[best_idx]
-                        best_stump = (j_idx, threshold,
-                                      left_mean * self.learning_rate,
-                                      right_mean * self.learning_rate)
+                        best_stump = (
+                            j_idx,
+                            threshold,
+                            left_mean * self.learning_rate,
+                            right_mean * self.learning_rate,
+                        )
                 if best_stump is None:
                     break
                 j_s, threshold, left_val, right_val = best_stump
@@ -195,6 +219,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                 residuals_full[~mask] -= right_val
 
         # Collapse into shape functions
+        self.n_rounds_ = sum(len(stumps) for stumps in feature_stumps.values())
         self.shape_functions_ = {}
 
         for j in range(n_features):
@@ -221,9 +246,9 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                     new_intervals = [smooth_intervals[0]]
                     for k in range(1, len(smooth_intervals) - 1):
                         new_intervals.append(
-                            0.6 * smooth_intervals[k] +
-                            0.2 * smooth_intervals[k - 1] +
-                            0.2 * smooth_intervals[k + 1]
+                            0.6 * smooth_intervals[k]
+                            + 0.2 * smooth_intervals[k - 1]
+                            + 0.2 * smooth_intervals[k + 1]
                         )
                     new_intervals.append(smooth_intervals[-1])
                     smooth_intervals = new_intervals
@@ -233,7 +258,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
         # Feature importance
         self.feature_importances_ = np.zeros(n_features)
-        for j, (thresholds, intervals) in self.shape_functions_.items():
+        for j, (_thresholds, intervals) in self.shape_functions_.items():
             self.feature_importances_[j] = max(intervals) - min(intervals)
 
         # Compute linear approximation for each feature (for display)
@@ -285,7 +310,8 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
     def predict(self, X):
         check_is_fitted(self, "shape_functions_")
-        X = np.asarray(X, dtype=np.float64)
+        X = align_feature_names(X, self.feature_names_in_, self.input_feature_names_in_)
+        X = np.asarray(validate_predict_data(self, X), dtype=np.float64)
         n = X.shape[0]
 
         total_importance = sum(self.feature_importances_)
@@ -295,7 +321,11 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
             # For linear features (R²>0.90), use linear approximation
             # to be consistent with __str__ display
             slope, offset, r2 = self.linear_approx_.get(j, (0, 0, 0))
-            if r2 > 0.70 and total_importance > 1e-10 and self.feature_importances_[j] / total_importance >= 0.01:
+            if (
+                r2 > 0.70
+                and total_importance > 1e-10
+                and self.feature_importances_[j] / total_importance >= 0.01
+            ):
                 pred += slope * X[:, j] + offset
             else:
                 xj = X[:, j]
@@ -306,7 +336,7 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
     def __str__(self):
         check_is_fitted(self, "shape_functions_")
-        feature_names = [f"x{i}" for i in range(self.n_features_in_)]
+        feature_names = [format_feature_name(name) for name in self.feature_names_in_]
 
         # Determine which features are approximately linear
         linear_features = {}  # j -> (slope, offset)
@@ -314,7 +344,10 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
         total_importance = sum(self.feature_importances_)
         if total_importance < 1e-10:
-            return f"Constant model: y = {self.intercept_:.4f}"
+            return (
+                f"Smart Additive GAM (boosted stumps, {self.n_rounds_} rounds):\n"
+                f"  y = {self.intercept_:.4f}"
+            )
 
         for j in self.shape_functions_:
             if self.feature_importances_[j] / total_importance < 0.01:
@@ -331,7 +364,8 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
 
         # Build display
         lines = [
-            f"Ridge Regression (L2 regularization, α=1.0000 chosen by CV):",
+            f"Smart Additive GAM (boosted stumps, {self.n_rounds_} rounds; "
+            "linear display approximation):",
         ]
 
         # Build equation string
@@ -341,7 +375,11 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
             name = feature_names[j]
             terms.append(f"{slope:.4f}*{name}")
 
-        eq = " + ".join(terms) + f" + {combined_intercept:.4f}" if terms else f"{combined_intercept:.4f}"
+        eq = (
+            " + ".join(terms) + f" + {combined_intercept:.4f}"
+            if terms
+            else f"{combined_intercept:.4f}"
+        )
         lines.append(f"  y = {eq}")
         lines.append("")
         lines.append("Coefficients:")
@@ -356,8 +394,9 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
         if nonlinear_features:
             lines.append("")
             lines.append("Nonlinear feature effects (piecewise corrections to add to above):")
-            importance_sorted = sorted(nonlinear_features.keys(),
-                                       key=lambda j: self.feature_importances_[j], reverse=True)
+            importance_sorted = sorted(
+                nonlinear_features.keys(), key=lambda j: self.feature_importances_[j], reverse=True
+            )
             for j in importance_sorted:
                 thresholds, intervals = nonlinear_features[j]
                 name = feature_names[j]
@@ -368,7 +407,10 @@ class SmartAdditiveRegressor(BaseEstimator, RegressorMixin):
                     elif i == len(thresholds):
                         parts.append(f"    {name} >  {thresholds[-1]:.4f}: {val:+.4f}")
                     else:
-                        parts.append(f"    {thresholds[i-1]:.4f} < {name} <= {thresholds[i]:.4f}: {val:+.4f}")
+                        parts.append(
+                            f"    {thresholds[i - 1]:.4f} < {name} <= "
+                            f"{thresholds[i]:.4f}: {val:+.4f}"
+                        )
                 lines.append(f"  f({name}):")
                 lines.extend(parts)
 
