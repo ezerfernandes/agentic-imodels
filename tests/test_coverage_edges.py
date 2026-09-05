@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -177,10 +178,13 @@ def test_hinge_models_select_features_and_handle_constant_display():
 
     constant = HingeGAMRegressor()
     constant.feature_names_in_ = np.asarray(["x0"], dtype=object)
-    constant.shape_functions_ = {}
-    constant.feature_importances_ = np.asarray([0.0])
-    constant.intercept_ = 2.5
-    assert str(constant) == "Constant model: y = 2.5000"
+    constant.n_features_in_ = 1
+    constant.selected_ = np.asarray([0])
+    constant.knot_info_ = []
+    constant.lasso_ = SimpleNamespace(coef_=np.asarray([0.0]), intercept_=2.5, alpha_=0.1)
+    constant_display = str(constant)
+    assert "Exact prediction equation:" in constant_display
+    assert "  y = 2.5" in constant_display
 
 
 def test_hybrid_residual_types_and_smart_gam_edge_paths():

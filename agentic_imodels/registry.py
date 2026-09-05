@@ -125,7 +125,7 @@ MODEL_REGISTRY: dict[str, ModelInfo] = {
         category="honest",
         summary="Pure Lasso on hinge features with ten breakpoints.",
         provenance="failure @ apr9-claude-effort=medium-main-result",
-        metrics_status="measured",
+        metrics_status="unmeasured-after-fix",
         predict_notes="predict computes exactly the displayed form.",
     ),
     "WinsorizedSparseOLSRegressor": ModelInfo(

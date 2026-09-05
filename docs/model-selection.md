@@ -24,7 +24,7 @@ Rank is mean global RMSE rank across development regression datasets. Lower is b
 | `HybridGAM` | 163.8 | 0.721 | 0.675 | display-predict decoupled | Smart additive GAM display plus hidden random-forest residual corrector. | failure @ apr20-claude-4.7-effort=medium-rerun4 | measured |
 | `TeacherStudentRuleSplineRegressor` | 204.0 | 0.605 | 0.803 | display-predict decoupled | GBM teacher with sparse symbolic student over rules, splines, and interactions. | failure @ apr17-codex-5.3-effort=high | measured |
 | `SparseSignedBasisPursuitRegressor` | 272.7 | 0.674 | 0.758 | honest | Forward-selected signed basis with ridge refit and rounded coefficients. | success @ apr17-codex-5.3-effort=high | measured |
-| `HingeGAMRegressor` | 280.2 | 0.558 | 0.783 | honest | Pure Lasso on hinge features with ten breakpoints. | failure @ apr9-claude-effort=medium-main-result | measured |
+| `HingeGAMRegressor` | 280.2 | 0.558 | 0.783 | honest | Pure Lasso on hinge features with ten breakpoints. | failure @ apr9-claude-effort=medium-main-result | unmeasured-after-fix |
 | `WinsorizedSparseOLSRegressor` | 326.9 | 0.651 | 0.726 | honest | Winsorized features, LassoCV selection, and OLS refit. | failure @ apr19-claude-4.7-effort=medium-rerun2 | measured |
 | `TinyDTDepth2Regressor` | 334.0 | 0.674 | 0.713 | honest | Depth-2 decision tree with four leaves. | failure @ apr19-claude-4.7-effort=medium-rerun3 | unmeasured-after-fix |
 | `SmartAdditiveRegressor` | 354.3 | 0.744 | 0.733 | honest | Laplacian-smoothed boosted stumps rendered as linear or short piecewise terms. | failure @ apr9-claude-effort=medium-main-result | measured |

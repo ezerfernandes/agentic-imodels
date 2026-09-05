@@ -87,7 +87,7 @@ Lower rank is better. Test interpretability is the fraction of held-out LLM-grad
 | `HybridGAM` | 163.8 | 0.68 | decoupled | Combines an additive shape model with a hidden residual correction. | failure @ apr20-claude-4.7-effort=medium-rerun4 | measured |
 | `TeacherStudentRuleSplineRegressor` | 204.0 | 0.80 | decoupled | Distills a teacher ensemble into sparse rules, splines, and interactions. | failure @ apr17-codex-5.3-effort=high | measured |
 | `SparseSignedBasisPursuitRegressor` | 272.7 | 0.76 | honest | Forward-selects signed basis terms, refits them, and prints the exact equation. | success @ apr17-codex-5.3-effort=high | measured |
-| `HingeGAMRegressor` | 280.2 | 0.78 | honest | Uses Lasso to select a sparse piecewise-linear additive model. | failure @ apr9-claude-effort=medium-main-result | measured |
+| `HingeGAMRegressor` | 280.2 | 0.78 | honest | Uses Lasso to select a sparse piecewise-linear additive model. | failure @ apr9-claude-effort=medium-main-result | unmeasured-after-fix |
 | `WinsorizedSparseOLSRegressor` | 326.9 | 0.73 | honest | Clips outliers, selects at most eight features with Lasso, and refits ordinary least squares. | failure @ apr19-claude-4.7-effort=medium-rerun2 | measured |
 | `TinyDTDepth2Regressor` | 334.0 | 0.71 | honest | Fits a decision tree with depth at most two and no more than four leaves. | failure @ apr19-claude-effort=medium-rerun3 | unmeasured-after-fix |
 | `SmartAdditiveRegressor` | 354.3 | 0.73 | honest | Converts boosted stumps into per-feature shapes and prints near-linear shapes as coefficients. | failure @ apr9-claude-effort=medium-main-result | measured |

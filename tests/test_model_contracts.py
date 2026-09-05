@@ -54,8 +54,8 @@ _HONEST_DISPLAY_PATTERNS = {
         "zero": r"^Zero-contribution features:.*$",
     },
     "HingeGAMRegressor": {
-        "active": r"^\s+x\d+:",
-        "zero": r"^Features with zero coefficients \(excluded\):.*$",
+        "active": r"^Active features:.*$",
+        "zero": r"^Zero-contribution features:.*$",
     },
     "SmartAdditiveRegressor": {
         "active": r"^\s+x\d+:",
@@ -83,6 +83,36 @@ def _features_on_matching_lines(text: str, line_pattern: str | None) -> set[int]
     }
 
 
+_DISPLAY_NUMBER = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?"
+
+
+def _predict_from_hinge_gam_display(text: str, X: np.ndarray) -> np.ndarray:
+    """Execute the exact HingeGAM equation emitted by ``str(model)``."""
+
+    equation_lines = [line.strip() for line in text.splitlines()]
+    intercept_line = next(line for line in equation_lines if line.startswith("y = "))
+    prediction = np.full(X.shape[0], float(intercept_line.removeprefix("y = ")))
+
+    for line in equation_lines:
+        match = re.fullmatch(rf"([+-]) ({_DISPLAY_NUMBER}) \* (.+)", line)
+        if match is None:
+            continue
+        coefficient = float(match.group(2)) * (1.0 if match.group(1) == "+" else -1.0)
+        basis = match.group(3)
+        linear = re.fullmatch(r"x(\d+)", basis)
+        if linear is not None:
+            prediction += coefficient * X[:, int(linear.group(1))]
+            continue
+        hinge = re.fullmatch(rf"max\(0, x(\d+) - \(({_DISPLAY_NUMBER})\)\)", basis)
+        if hinge is None:
+            raise AssertionError(f"Unrecognized HingeGAM basis in display: {basis}")
+        feature = int(hinge.group(1))
+        knot = float(hinge.group(2))
+        prediction += coefficient * np.maximum(0.0, X[:, feature] - knot)
+
+    return prediction
+
+
 def test_tiny_dt_is_a_depth_two_tree_and_exposes_constructor_params() -> None:
     X, y = make_regression(n_samples=200, n_features=5, random_state=0)
     model = TinyDTDepth2Regressor().fit(X, y)
@@ -105,15 +135,14 @@ def test_tiny_dt_is_a_depth_two_tree_and_exposes_constructor_params() -> None:
     assert "BayesianRidge" not in text
 
 
-def test_tiny_dt_registry_metrics_are_marked_unmeasured_after_fix() -> None:
-    assert MODEL_REGISTRY["TinyDTDepth2Regressor"].metrics_status == "unmeasured-after-fix"
+def test_changed_models_are_marked_unmeasured_after_fix() -> None:
+    changed_models = {
+        "DistilledTreeBlendAtlasRegressor",
+        "HingeGAMRegressor",
+        "TinyDTDepth2Regressor",
+    }
     assert all(
-        info.metrics_status
-        == (
-            "unmeasured-after-fix"
-            if name in {"TinyDTDepth2Regressor", "DistilledTreeBlendAtlasRegressor"}
-            else "measured"
-        )
+        info.metrics_status == ("unmeasured-after-fix" if name in changed_models else "measured")
         for name, info in MODEL_REGISTRY.items()
     )
 
@@ -206,6 +235,24 @@ def test_gam_displays_name_the_fitted_model() -> None:
     assert alpha == pytest.approx(hinge.lasso_.alpha_, rel=5e-4)
     assert "stumps" in str(smart).splitlines()[0]
     assert "RandomForest residual" in str(hybrid)
+
+
+def test_hinge_gam_display_reconstructs_predictions() -> None:
+    rng = np.random.RandomState(7)
+    x0 = np.linspace(-2.0, 2.0, 240)
+    X = np.column_stack([x0, rng.normal(size=len(x0)), rng.normal(size=len(x0))])
+    y = 1.25 + 2.0 * X[:, 0] - 3.5 * np.maximum(0.0, X[:, 0]) + 0.75 * X[:, 1]
+    model = HingeGAMRegressor(n_knots=3).fit(X, y)
+    display = str(model)
+    probe_x0 = np.linspace(-3.0, 3.0, 121)
+    probe = np.column_stack(
+        [probe_x0, rng.normal(size=len(probe_x0)), rng.normal(size=len(probe_x0))]
+    )
+
+    assert "Exact prediction equation:" in display
+    assert "max(0," in display
+    reconstructed = _predict_from_hinge_gam_display(display, probe)
+    np.testing.assert_allclose(reconstructed, model.predict(probe), rtol=1e-14, atol=1e-14)
 
 
 @pytest.mark.parametrize("model_name", ai.__all__)

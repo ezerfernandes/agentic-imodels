@@ -8,6 +8,8 @@ Mean global rank (lower is better): 280.18   (pooled 65 dev datasets)
 Interpretability (fraction passed, higher is better):
     dev  (43 tests):  0.558
     test (157 tests): 0.783
+
+Metrics predate the exact-equation display fix in this package.
 """
 
 import numpy as np
@@ -27,15 +29,13 @@ from ._names import (
 
 class HingeGAMRegressor(RegressorMixin, BaseEstimator):
     """
-    HingeGAM: Lasso on hinge basis (piecewise-linear) + conditional EBM,
-    displayed using the SmoothAdditiveGAM pipeline.
+    HingeGAM: Lasso on a hinge basis (piecewise-linear), displayed as its
+    exact prediction equation.
 
     Stage 1: LassoCV on original features + positive hinges at quantile knots.
-    Stage 2: EBM on residuals (if >10% variance unexplained).
 
-    Display: Computes per-feature shape functions from the Lasso model,
-    applies Laplacian smoothing, and uses adaptive Ridge/piecewise display.
-    Predict uses Lasso+EBM (consistent for linear features via R²>0.70).
+    Display and prediction both use the fitted Lasso hinge basis directly.
+    No residual EBM is used.
     """
 
     def __init__(
@@ -209,76 +209,52 @@ class HingeGAMRegressor(RegressorMixin, BaseEstimator):
         return pred
 
     def __str__(self):
-        check_is_fitted(self, "shape_functions_")
+        check_is_fitted(self, "lasso_")
         feature_names = [format_feature_name(name) for name in self.feature_names_in_]
-
-        total_importance = sum(self.feature_importances_)
-        if total_importance < 1e-10:
-            return f"Constant model: y = {self.intercept_:.4f}"
-
-        linear_features = {}
-        nonlinear_features = {}
-
-        for j in self.shape_functions_:
-            if self.feature_importances_[j] / total_importance < 0.01:
-                continue
-            slope, offset, r2 = self.linear_approx_[j]
-            if r2 > 0.70:
-                linear_features[j] = (slope, offset)
-            else:
-                nonlinear_features[j] = self.shape_functions_[j]
-
-        combined_intercept = self.intercept_ + sum(off for _, off in linear_features.values())
-
+        coefficients = np.asarray(self.lasso_.coef_, dtype=float)
+        n_selected = len(self.selected_)
         n_breakpoints = len(self.knot_info_)
-        n_active = int(np.count_nonzero(np.abs(self.lasso_.coef_) > 1e-10))
+        n_active = int(np.count_nonzero(coefficients))
         lines = [
             f"Hinge GAM (LassoCV on linear + hinge basis, alpha={self.lasso_.alpha_:.4g}, "
             f"{n_breakpoints} breakpoints, {n_active} active terms):"
         ]
-        terms = [
-            f"{linear_features[j][0]:.4f}*{feature_names[j]}"
-            for j in sorted(linear_features.keys())
-        ]
-        eq = (
-            " + ".join(terms) + f" + {combined_intercept:.4f}"
-            if terms
-            else f"{combined_intercept:.4f}"
+        lines.extend(
+            [
+                "Exact prediction equation:",
+                f"  y = {float(self.lasso_.intercept_):.17g}",
+            ]
         )
-        lines.append(f"  y = {eq}")
+
+        active = set()
+        for selected_index, original_index in enumerate(self.selected_):
+            coefficient = float(coefficients[selected_index])
+            if coefficient == 0.0:
+                continue
+            active.add(int(original_index))
+            operator = "+" if coefficient > 0.0 else "-"
+            lines.append(
+                f"      {operator} {abs(coefficient):.17g} * {feature_names[int(original_index)]}"
+            )
+
+        for coefficient_index, (selected_index, knot) in enumerate(self.knot_info_):
+            coefficient = float(coefficients[n_selected + coefficient_index])
+            if coefficient == 0.0:
+                continue
+            original_index = int(self.selected_[selected_index])
+            active.add(original_index)
+            operator = "+" if coefficient > 0.0 else "-"
+            lines.append(
+                f"      {operator} {abs(coefficient):.17g} * "
+                f"max(0, {feature_names[original_index]} - ({float(knot):.17g}))"
+            )
+
         lines.append("")
-        lines.append("Coefficients:")
-        for j, (slope, _) in sorted(
-            linear_features.items(), key=lambda x: abs(x[1][0]), reverse=True
-        ):
-            lines.append(f"  {feature_names[j]}: {slope:.4f}")
-        lines.append(f"  intercept: {combined_intercept:.4f}")
-
-        if nonlinear_features:
-            lines.append("")
-            lines.append("Nonlinear feature effects (piecewise corrections to add to above):")
-            for j in sorted(
-                nonlinear_features.keys(), key=lambda j: self.feature_importances_[j], reverse=True
-            ):
-                thresholds, intervals = nonlinear_features[j]
-                name = feature_names[j]
-                parts = []
-                for i, val in enumerate(intervals):
-                    if i == 0:
-                        parts.append(f"    {name} <= {thresholds[0]:.4f}: {val:+.4f}")
-                    elif i == len(thresholds):
-                        parts.append(f"    {name} >  {thresholds[-1]:.4f}: {val:+.4f}")
-                    else:
-                        parts.append(
-                            f"    {thresholds[i - 1]:.4f} < {name} <= "
-                            f"{thresholds[i]:.4f}: {val:+.4f}"
-                        )
-                lines.append(f"  f({name}):")
-                lines.extend(parts)
-
-        active = set(linear_features.keys()) | set(nonlinear_features.keys())
+        lines.append(
+            "Active features: "
+            + (", ".join(feature_names[j] for j in sorted(active)) if active else "none")
+        )
         inactive = [feature_names[j] for j in range(self.n_features_in_) if j not in active]
         if inactive:
-            lines.append("")
-            lines.append(f"Features with zero coefficients (excluded): {', '.join(inactive)}")
+            lines.append(f"Zero-contribution features: {', '.join(inactive)}")
         return "\n".join(lines)
