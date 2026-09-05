@@ -52,6 +52,32 @@ Always print the fitted model. The printed representation is the core artifact t
 
 Keep `X` as a pandas DataFrame when it has meaningful column names; fitted displays then use names such as `MedInc` and `Latitude`. You can also pass `feature_names=[...]` to any public estimator when fitting an array. An ndarray or list without explicit names uses positional names `x0`, `x1`, and so on. DataFrame predictions may use a different column order, but missing fitted columns raise `ValueError`.
 
+When fitting a DataFrame, explicit `feature_names` change the names shown in the explanation. The original DataFrame columns remain the keys used for prediction alignment:
+
+```python
+import pandas as pd
+from agentic_imodels import TinyDTDepth2Regressor
+
+X = pd.DataFrame(
+    {
+        "income": [2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0],
+        "rooms": [1.0, 2.0, 1.5, 2.5, 2.0, 3.0, 2.5, 3.5],
+    }
+)
+y = [1.0, 1.4, 1.8, 2.1, 2.5, 3.0, 3.4, 3.9]
+
+model = TinyDTDepth2Regressor(
+    feature_names=["annual income", "rooms per home"]
+).fit(X, y)
+print(model)  # uses the explicit display names
+model.predict(X[["rooms", "income"]])  # reordered DataFrame columns are aligned
+
+try:
+    model.predict(X.drop(columns="rooms"))
+except ValueError as exc:
+    print(exc)  # the original fitted column, "rooms", is required
+```
+
 ## Choosing A Model
 
 | Model | Category | Summary | Predict note | Provenance | Metrics |
