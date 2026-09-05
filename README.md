@@ -2,12 +2,20 @@
 
 [![CI](https://github.com/ezerfernandes/agentic-imodels/actions/workflows/ci.yml/badge.svg)](https://github.com/ezerfernandes/agentic-imodels/actions/workflows/ci.yml)
 
-`agentic-imodels` is a small Python package of scikit-learn-compatible tabular regressors whose fitted forms are designed to be read by humans and coding agents. The repository root is the canonical install target and the canonical skill entrypoint.
+`agentic-imodels` is a Python package of ten scikit-learn-compatible regressors for numeric tabular data. Each estimator has the usual `fit` and `predict` methods. The unusual part is `str(model)`: after fitting, the model prints an equation, rule set, small tree, or model card that a person or coding agent can inspect.
+
+The models came from autonomous research loops that wrote regressors, measured them, and tried again. The installable package is the small, hardened result of that work. The repository also retains the research machinery and raw experiment outputs for provenance.
+
+## Install
 
 ```bash
 pip install git+https://github.com/ezerfernandes/agentic-imodels
 uv add git+https://github.com/ezerfernandes/agentic-imodels
 ```
+
+Runtime dependencies are `numpy`, `scikit-learn`, and `interpret`. The larger research stack is available through the optional `research` extra.
+
+## Quick Start
 
 ```python
 from sklearn.datasets import fetch_california_housing
@@ -18,11 +26,13 @@ X, y = fetch_california_housing(return_X_y=True, as_frame=True)
 X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
 model = HingeEBMRegressor().fit(X_train, y_train)
-print(model)              # compact equation / rule set / model card
+print(model)
 predictions = model.predict(X_test)
 ```
 
-Because `X` is a DataFrame, fitted displays use its column names. For example, a depth-2 tree fitted on the first 1,500 California-housing rows prints this excerpt:
+Keep `X` as a pandas DataFrame when column names matter. Fitted displays then use names such as `MedInc` and `Latitude`. Array input uses `x0`, `x1`, and so on unless you pass `feature_names=[...]`.
+
+A depth-two tree fitted on the first 1,500 California housing rows prints text like this:
 
 ```text
 Decision Tree Regressor (max_depth=2):
@@ -33,48 +43,60 @@ Decision Tree Regressor (max_depth=2):
 |   |   |--- value: [1.03]
 ```
 
-## Why This Exists
+## The Main Design Choice
 
-The models in this package came from agentic research loops that repeatedly wrote, evaluated, and selected interpretable regressors. They optimize for two things that are usually in tension:
+The package treats the printed fitted model as part of its public API. There is still a tradeoff. A model small enough to print may lose predictive accuracy, while a stronger model may need more machinery than a clean explanation can show.
 
-- **Predictive performance:** RMSE rank across tabular regression datasets.
-- **Agent readability:** whether another LLM can answer questions from the fitted model text.
+The registry makes that choice explicit.
 
-The result is a curated set of ten estimators that plug into normal scikit-learn workflows while making `str(model)` a first-class artifact.
+### Honest Models
 
-## Install And Develop
+For an honest model, the displayed form closely matches what `predict` computes. If the display says that a feature has zero effect, changing that feature should not change the prediction. The test suite checks this behavior.
 
-For local development:
+Choose an honest model when the printed explanation must describe the prediction path used in production.
 
-```bash
-git clone https://github.com/ezerfernandes/agentic-imodels
-cd agentic-imodels
-uv sync --extra dev
-uv run --extra dev python -m pytest
-```
+- `SparseSignedBasisPursuitRegressor`
+- `HingeGAMRegressor`
+- `WinsorizedSparseOLSRegressor`
+- `TinyDTDepth2Regressor`
+- `SmartAdditiveRegressor`
 
-Runtime dependencies are intentionally lean: `numpy`, `scikit-learn`, and `interpret`. Research dependencies are kept behind the optional `research` extra.
+### Display-Predict Decoupled Models
+
+A decoupled model prints a readable summary, but `predict` also uses a residual corrector or teacher ensemble. These models often have better predictive rank. Their displays disclose the hidden path, and reports should do the same.
+
+Choose a decoupled model when predictive performance matters more than reconstructing every prediction from the printed text.
+
+- `HingeEBMRegressor` adds an EBM residual corrector to its hinge formula.
+- `DistilledTreeBlendAtlasRegressor` predicts with a calibrated GBM, random forest, and ridge-student blend.
+- `DualPathSparseSymbolicRegressor` uses its teacher ensemble by default. Set `predict_with="student"` to use the displayed equation.
+- `HybridGAM` adds a shrunken forest or gradient-boosting residual correction to its additive model.
+- `TeacherStudentRuleSplineRegressor` uses its teacher ensemble by default. Set `predict_with="student"` to use the displayed equation.
+
+Do not present a decoupled model's text as the complete computational graph.
 
 ## Model Guide
 
-| Class | Rank ↓ | Test interp ↑ | Category | Best use | Provenance | Metrics |
+Lower rank is better. Test interpretability is the fraction of held-out LLM-graded questions answered correctly from fitted model text.
+
+| Class | Rank | Test interp | Category | What it does | Provenance | Metrics |
 | --- | ---: | ---: | --- | --- | --- | --- |
-| `HingeEBMRegressor` | 108.2 | 0.71 | display-predict decoupled | predict adds a hidden EBM residual corrector to the displayed hinge formula. | success @ apr9-claude-effort=medium-main-result | measured |
-| `DistilledTreeBlendAtlasRegressor` | 139.7 | 0.71 | display-predict decoupled | predict returns the calibrated GBM/RF/student blend, not the displayed sparse equation. | success @ apr19-codex-5.3-effort=xhigh | unmeasured-after-fix |
-| `DualPathSparseSymbolicRegressor` | 163.5 | 0.71 | display-predict decoupled | predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation. | failure @ apr17-codex-5.3-effort=high | measured |
-| `HybridGAM` | 163.8 | 0.68 | display-predict decoupled | predict adds a shrunk random-forest residual correction to the displayed additive model. | failure @ apr20-claude-4.7-effort=medium-rerun4 | measured |
-| `TeacherStudentRuleSplineRegressor` | 204.0 | 0.80 | display-predict decoupled | predict uses the teacher ensemble by default; pass predict_with='student' to predict with the displayed equation. | failure @ apr17-codex-5.3-effort=high | measured |
-| `SparseSignedBasisPursuitRegressor` | 272.7 | 0.76 | honest | predict computes exactly the displayed form. | success @ apr17-codex-5.3-effort=high | measured |
-| `HingeGAMRegressor` | 280.2 | 0.78 | honest | predict computes exactly the displayed form. | failure @ apr9-claude-effort=medium-main-result | measured |
-| `WinsorizedSparseOLSRegressor` | 326.9 | 0.73 | honest | predict computes exactly the displayed form. | failure @ apr19-claude-4.7-effort=medium-rerun2 | measured |
-| `TinyDTDepth2Regressor` | 334.0 | 0.71 | honest | predict computes exactly the displayed form. | failure @ apr19-claude-4.7-effort=medium-rerun3 | unmeasured-after-fix |
-| `SmartAdditiveRegressor` | 354.3 | 0.73 | honest | predict computes exactly the displayed form. | failure @ apr9-claude-effort=medium-main-result | measured |
+| `HingeEBMRegressor` | 108.2 | 0.71 | decoupled | Fits a sparse hinge formula, then models its residuals with an EBM. | success @ apr9-claude-effort=medium-main-result | measured |
+| `DistilledTreeBlendAtlasRegressor` | 139.7 | 0.71 | decoupled | Blends GBM, random forest, and ridge predictions, then prints a sparse equation and partial-dependence card. | success @ apr19-codex-5.3-effort=xhigh | unmeasured-after-fix |
+| `DualPathSparseSymbolicRegressor` | 163.5 | 0.71 | decoupled | Builds a symbolic student from linear, square, hinge, and interaction terms beside a teacher ensemble. | failure @ apr17-codex-5.3-effort=high | measured |
+| `HybridGAM` | 163.8 | 0.68 | decoupled | Combines an additive shape model with a hidden residual correction. | failure @ apr20-claude-4.7-effort=medium-rerun4 | measured |
+| `TeacherStudentRuleSplineRegressor` | 204.0 | 0.80 | decoupled | Distills a teacher ensemble into sparse rules, splines, and interactions. | failure @ apr17-codex-5.3-effort=high | measured |
+| `SparseSignedBasisPursuitRegressor` | 272.7 | 0.76 | honest | Forward-selects signed basis terms, refits them, and prints the exact equation. | success @ apr17-codex-5.3-effort=high | measured |
+| `HingeGAMRegressor` | 280.2 | 0.78 | honest | Uses Lasso to select a sparse piecewise-linear additive model. | failure @ apr9-claude-effort=medium-main-result | measured |
+| `WinsorizedSparseOLSRegressor` | 326.9 | 0.73 | honest | Clips outliers, selects at most eight features with Lasso, and refits ordinary least squares. | failure @ apr19-claude-4.7-effort=medium-rerun2 | measured |
+| `TinyDTDepth2Regressor` | 334.0 | 0.71 | honest | Fits a decision tree with depth at most two and no more than four leaves. | failure @ apr19-claude-effort=medium-rerun3 | unmeasured-after-fix |
+| `SmartAdditiveRegressor` | 354.3 | 0.73 | honest | Converts boosted stumps into per-feature shapes and prints near-linear shapes as coefficients. | failure @ apr9-claude-effort=medium-main-result | measured |
 
-Rank and interpretability were measured by the evolution harness on 65 development datasets (rank) and 157 held-out LLM-graded tests (interp), on ndarray input, before the fixes listed in CHANGELOG. 'failure' provenance means the model did not improve on its predecessor within its own run but was selected for architectural diversity.
+The evolution harness measured rank across 65 development datasets and interpretability across 157 held-out tests. Those measurements used array input and predate the fixes recorded by `metrics_status`. A `failure` provenance label means that the model did not improve on its predecessor within that research run. It does not mean that the packaged estimator crashes or fails the current test suite. Some such models were kept because they add a useful model shape to the final set.
 
-Use a **display-predict decoupled** model when predictive rank matters most. Use an **honest** model when the printed explanation must closely match the computation used by `predict`.
+For most analysis work, fit one honest model and one strong decoupled model. Compare the feature directions, thresholds, and dominant predictors. If they disagree, use the honest model for interpretation and the decoupled model for prediction.
 
-The same metadata is available programmatically:
+The same metadata is available in Python:
 
 ```python
 from agentic_imodels import HONEST_MODELS, MODEL_REGISTRY, get_model_info
@@ -83,36 +105,94 @@ print(HONEST_MODELS)
 print(get_model_info("HingeEBMRegressor"))
 ```
 
+See the [model selection guide](docs/model-selection.md) for recommendations by use case.
+
+## How the Package Works
+
+Every public estimator follows the scikit-learn regressor contract:
+
+1. The constructor stores each hyperparameter so cloning and parameter search work.
+2. `fit(X, y)` validates dense numeric inputs, records feature names, and learns fitted state.
+3. `predict(X)` aligns DataFrame columns to their fitted order, rejects missing columns, and returns a one-dimensional numeric array.
+4. `str(model)` checks that the estimator is fitted, then renders its readable form.
+
+DataFrame prediction columns may arrive in a different order. The package aligns them by name. Array and list inputs remain positional and must have the same feature count used during fitting.
+
+The estimators expect numeric features and a continuous target. Encode categorical variables and impute missing values with normal scikit-learn preprocessing.
+
+## From Research Loop to Package
+
+The research workflow has a narrow editing boundary. An agent changes one regressor file while fixed harnesses measure two objectives:
+
+- RMSE rank across tabular regression datasets
+- Whether another LLM can answer questions from the fitted model text
+
+Each experiment is committed, evaluated, and saved with its metrics. Processing scripts pool results across runs and identify models on or near the performance and interpretability Pareto front. The final package then removes research-harness imports and adds stable input handling, metadata, documentation, and production tests.
+
+The current tests check more than importability. They check cloning, deterministic fitting, pickling, not-fitted errors, batch invariance, DataFrame column alignment, display disclosures, and the dependency claims made by honest displays.
+
+## Repository Map
+
+The checkout contains a small product core and a large research archive.
+
+### Product Core
+
+| Path | Purpose |
+| --- | --- |
+| `agentic_imodels/` | Canonical installable package with ten estimator modules, shared input helpers, and the registry. |
+| `tests/` | Public API, sklearn compatibility, display faithfulness, packaging, and edge-case tests. |
+| `docs/` | Model selection, API, skill, development, and release documentation. |
+| `SKILL.md` | Instructions for coding agents that use the package in data-analysis work. |
+| `pyproject.toml` | Package metadata, dependencies, build rules, and test configuration. |
+
+### Research Archive
+
+| Path | Purpose |
+| --- | --- |
+| `evolve/` | Claude-oriented model evolution loop and fixed evaluators. |
+| `evolve_codex/` | Codex-oriented version of the evolution loop. |
+| `result_libs/` | Raw generated models, metrics, logs, and plots. |
+| `result_libs_processed/` | Aggregation and selection scripts, plus a historical package snapshot. |
+| `generalization_experiments/` | Held-out checks across evaluators and random seeds. |
+| `e2e_experiments/` | BLADE benchmark runs that use the package and skill. |
+
+Applications should import from the root `agentic_imodels/` package. Do not depend on `result_libs_processed/agentic-imodels/`; it is a historical snapshot.
+
+## Development
+
+```bash
+git clone https://github.com/ezerfernandes/agentic-imodels
+cd agentic-imodels
+uv sync --extra dev
+uv run --extra dev python -m pytest
+```
+
+The wheel contains the runtime package and distribution metadata. The source distribution also contains the root README, skill, license, and package documentation. Research dependencies and output archives do not enter the wheel.
+
+Before publishing a change, run:
+
+```bash
+uv run --extra dev ruff check agentic_imodels tests
+uv run --extra dev ruff format --check agentic_imodels tests
+uv run --extra dev python -m pytest -q
+uv run --extra dev python -m build
+```
+
+See the [development and release guide](docs/development.md) before adding a model or changing the package boundary.
+
+## Use as an Agent Skill
+
+The root [`SKILL.md`](SKILL.md) teaches Codex, Claude Code, and similar coding agents when to choose these regressors, how to compare an honest model with a decoupled model, and how to report fitted text without overstating it.
+
+Point an agent at the repository root when you want it to choose, fit, print, and interpret a regressor in a data-science workflow. See the [skill guide](docs/agent-skill.md) for installation and usage.
+
 ## Documentation
 
-- [Docs index](docs/README.md)
+- [Documentation index](docs/README.md)
 - [Model selection guide](docs/model-selection.md)
 - [API reference](docs/api-reference.md)
 - [Agent skill guide](docs/agent-skill.md)
 - [Development and release guide](docs/development.md)
-
-## Use As A Skill
-
-The root [`SKILL.md`](SKILL.md) is written for Codex, Claude Code, and similar coding agents. Point an agent at this repository root when you want it to choose, fit, print, and interpret these regressors in a data-science workflow.
-
-See the [skill installation guide](docs/agent-skill.md#install-the-skill) for Claude Code user/project installs and the current Codex CLI skill locations.
-
-## Research Provenance
-
-The repository still carries the research machinery that produced the package:
-
-| Path | Purpose |
-| --- | --- |
-| `agentic_imodels/` | Canonical installable package. |
-| `SKILL.md` | Canonical agent skill entrypoint. |
-| `evolve/` | Claude-oriented model evolution loop. |
-| `evolve_codex/` | Codex-oriented model evolution loop. |
-| `result_libs/` | Raw generated models and evaluation outputs. |
-| `result_libs_processed/` | Historical processed package snapshot and extraction scripts. |
-| `generalization_experiments/` | Held-out regression and interpretability checks. |
-| `e2e_experiments/` | BLADE benchmark experiments using the package/skill. |
-
-Wheels contain only the runtime package. Source distributions include the package, root skill, license, README, and package docs.
 
 ## Citation
 
