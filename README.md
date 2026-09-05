@@ -151,6 +151,7 @@ The checkout contains a small product core and a large research archive.
 | --- | --- |
 | `evolve/` | Claude-oriented model evolution loop and fixed evaluators. |
 | `evolve_codex/` | Codex-oriented version of the evolution loop. |
+| `evolve_gam/` | Additive Gaussian-process GAM research, benchmarks, prompts, and report. |
 | `result_libs/` | Raw generated models, metrics, logs, and plots. |
 | `result_libs_processed/` | Aggregation and selection scripts, plus a historical package snapshot. |
 | `generalization_experiments/` | Held-out checks across evaluators and random seeds. |

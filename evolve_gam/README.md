@@ -6,8 +6,9 @@ and simple. What it converged on is a generalized additive model with pairwise
 interactions in which every shape function is a Gaussian process over the
 quantile bins of its feature.
 
-The model has since been contributed to `imodels`
-([csinva/imodels#299](https://github.com/csinva/imodels/pull/299)) as `AddGPRegressor`.
+The model line was later contributed to `imodels`
+([csinva/imodels#299](https://github.com/csinva/imodels/pull/299)) and merged as
+`GPGamRegressor`.
 
 ## The idea
 
